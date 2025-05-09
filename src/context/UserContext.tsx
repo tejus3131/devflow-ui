@@ -1,14 +1,36 @@
-'use client';
-import { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '../lib/db';
+"use client";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import supabase from "../lib/db";
 
-// Create the context
-export const UserContext = createContext(null);
+// Define the shape of the user object
+interface User {
+  id: string;
+  email: string;
+  avatar_url: string;
+  full_name: string;
+  user_name: string;
+}
+
+// Define the context value type
+interface UserContextValue {
+  user: User | null;
+  loading: boolean;
+  signInWithGithub: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+// Create the context with a default value of `null`
+export const UserContext = createContext<UserContextValue | null>(null);
+
+// Define the props for the UserProvider
+interface UserProviderProps {
+  children: ReactNode;
+}
 
 // Provider component
-export function UserProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export function UserProvider({ children }: UserProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Check for user on mount and when hash changes (for OAuth redirects)
   useEffect(() => {
@@ -18,8 +40,17 @@ export function UserProvider({ children }) {
         if (error) {
           console.error("Error fetching user:", error);
           setUser(null);
+        } else if (data?.user) {
+          const { id, email, user_metadata } = data.user;
+          setUser({
+            id,
+            email: email || "",
+            avatar_url: user_metadata.avatar_url || "",
+            full_name: user_metadata.full_name || "",
+            user_name: user_metadata.user_name || "",
+          });
         } else {
-          setUser(data ? { data } : null);
+          setUser(null);
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -32,20 +63,27 @@ export function UserProvider({ children }) {
     // Also subscribe to auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          setUser({ data: { user: session.user } });
-        } else if (event === 'SIGNED_OUT') {
+        if (event === "SIGNED_IN" && session?.user) {
+          const { id, email, user_metadata } = session.user;
+          setUser({
+            id,
+            email: email || "",
+            avatar_url: user_metadata.avatar_url || "",
+            full_name: user_metadata.full_name || "",
+            user_name: user_metadata.user_name || "",
+          });
+        } else if (event === "SIGNED_OUT") {
           setUser(null);
         }
-      }
+      },
     );
 
     checkUser();
-    window.addEventListener('hashchange', checkUser);
+    window.addEventListener("hashchange", checkUser);
 
     // Clean up
     return () => {
-      window.removeEventListener('hashchange', checkUser);
+      window.removeEventListener("hashchange", checkUser);
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
@@ -54,8 +92,8 @@ export function UserProvider({ children }) {
 
   // Auth functions
   const signInWithGithub = async () => {
-    return await supabase.auth.signInWithOAuth({
-      provider: 'github'
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
     });
   };
 
@@ -65,17 +103,15 @@ export function UserProvider({ children }) {
   };
 
   return (
-    <UserContext.Provider 
-      value={{ 
-        user, 
+    <UserContext.Provider
+      value={{
+        user,
         loading,
-        signInWithGithub, 
-        signOut 
+        signInWithGithub,
+        signOut,
       }}
     >
       {children}
     </UserContext.Provider>
   );
 }
-
-

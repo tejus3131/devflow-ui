@@ -1,6 +1,7 @@
 import PageHeader from "../../components/PageHeader";
 import ContentCardList from "../../components/ContentCardList";
 import { ContentCardProps } from "../../components/ContentCard";
+import Button from "@/components/Button";
 const demoData: ContentCardProps[] = [
   {
     name: "Repository A",
@@ -8,8 +9,8 @@ const demoData: ContentCardProps[] = [
     location: {
       items: [
         { label: "Alice Johnson", href: "/alice-johnson" },
-        { label: "Repository A", href: "/alice-johnson/repo-a" }
-      ]
+        { label: "Repository A", href: "/alice-johnson/repo-a" },
+      ],
     },
     type: "Repository",
     authors: ["Alice Johnson"],
@@ -17,7 +18,7 @@ const demoData: ContentCardProps[] = [
     upvotes: 15,
     downvotes: 2,
     userVote: null,
-    className: ""
+    className: "",
   },
   {
     name: "Button",
@@ -27,7 +28,7 @@ const demoData: ContentCardProps[] = [
         { label: "Alice Johnson", href: "/alice-johnson" },
         { label: "Repository A", href: "/alice-johnson/repo-a" },
         { label: "Button", href: "/alice-johnson/repo-a/button" },
-      ]
+      ],
     },
     type: "Component",
     authors: ["Alice Johnson"],
@@ -35,18 +36,21 @@ const demoData: ContentCardProps[] = [
     upvotes: 25,
     downvotes: 1,
     userVote: "up",
-    className: ""
+    className: "",
   },
   {
     name: "React + Tailwind CSS",
-    description: "Configuration files for the project setup.",
+    description: "Configuration files for the project setup lorem.",
     location: {
       items: [
         { label: "Alice Johnson", href: "/alice-johnson" },
         { label: "Repository A", href: "/alice-johnson/repo-a" },
         { label: "Button", href: "/alice-johnson/repo-a/button" },
-        { label: "React + Tailwind CSS", href: "/alice-johnson/repo-a/button/react-tailwindcss" },
-      ]
+        {
+          label: "React + Tailwind CSS",
+          href: "/alice-johnson/repo-a/button/react-tailwindcss",
+        },
+      ],
     },
     type: "Configuration",
     authors: ["Alice Johnson"],
@@ -54,7 +58,7 @@ const demoData: ContentCardProps[] = [
     upvotes: 10,
     downvotes: 0,
     userVote: null,
-    className: ""
+    className: "",
   },
   {
     name: "Dark Mode Theme",
@@ -64,9 +68,15 @@ const demoData: ContentCardProps[] = [
         { label: "Alice Johnson", href: "/alice-johnson" },
         { label: "Repository A", href: "/alice-johnson/repo-a" },
         { label: "Button", href: "/alice-johnson/repo-a/button" },
-        { label: "React + Tailwind CSS", href: "/alice-johnson/repo-a/button/react-tailwindcss" },
-        { label: "Dark Mode", href: "/alice-johnson/repo-a/button/react-tailwindcss/dark-mode" }
-      ]
+        {
+          label: "React + Tailwind CSS",
+          href: "/alice-johnson/repo-a/button/react-tailwindcss",
+        },
+        {
+          label: "Dark Mode",
+          href: "/alice-johnson/repo-a/button/react-tailwindcss/dark-mode",
+        },
+      ],
     },
     type: "Flavour",
     authors: ["Alice Johnson"],
@@ -74,7 +84,7 @@ const demoData: ContentCardProps[] = [
     upvotes: 30,
     downvotes: 3,
     userVote: "down",
-    className: ""
+    className: "",
   },
 ];
 export default function Page() {
@@ -83,9 +93,15 @@ export default function Page() {
       { label: "Alice Johnson", href: "/alice-johnson" },
       { label: "Repository A", href: "/alice-johnson/repo-a" },
       { label: "Button", href: "/alice-johnson/repo-a/button" },
-      { label: "React + Tailwind CSS", href: "/alice-johnson/repo-a/button/react-tailwindcss" },
-      { label: "Dark Mode", href: "/alice-johnson/repo-a/button/react-tailwindcss/dark-mode" }
-    ]
+      {
+        label: "React + Tailwind CSS",
+        href: "/alice-johnson/repo-a/button/react-tailwindcss",
+      },
+      {
+        label: "Dark Mode",
+        href: "/alice-johnson/repo-a/button/react-tailwindcss/dark-mode",
+      },
+    ],
   };
 
   return (
@@ -94,14 +110,17 @@ export default function Page() {
         breadcrumbs={sampleBreadcrumbs}
         title="Project Details"
         rightComponent={
-          <button className="bg-blue-500 text-white px-4 py-2 rounded">
-            Add New
-          </button>
+          <Button
+            variant="primary"
+            className="px-4 py-3"
+            href="/repository/create"
+          >
+            Create New
+          </Button>
         }
       />
-      <ContentCardList
-        items={demoData}
-      />
+   
+      <ContentCardList items={demoData} />
     </>
   );
 }

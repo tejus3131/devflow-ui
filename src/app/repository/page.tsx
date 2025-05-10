@@ -1,7 +1,9 @@
+'use client';
 import PageHeader from "../../components/PageHeader";
 import ContentCardList from "../../components/ContentCardList";
 import { ContentCardProps } from "../../components/ContentCard";
 import Button from "@/components/Button";
+import { useModalContext } from "@/context/ModalContext";
 const demoData: ContentCardProps[] = [
   {
     name: "Repository A",
@@ -88,6 +90,8 @@ const demoData: ContentCardProps[] = [
   },
 ];
 export default function Page() {
+
+  const {openModal} = useModalContext();
   const sampleBreadcrumbs = {
     items: [
       { label: "Alice Johnson", href: "/alice-johnson" },
@@ -112,8 +116,8 @@ export default function Page() {
         rightComponent={
           <Button
             variant="primary"
-            className="px-4 py-3"
-            href="/repository/create"
+            className="px-5 py-3"
+            onClick={() => openModal("career")}
           >
             Create New
           </Button>

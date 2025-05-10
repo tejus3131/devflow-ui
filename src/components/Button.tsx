@@ -5,7 +5,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary';
     href?: string;
     className?: string;
-    icon?: React.ReactNode; // Add icon prop
+    icon?: React.ReactNode;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -13,7 +14,8 @@ const Button: React.FC<ButtonProps> = ({
     variant = 'primary',
     href,
     className = '',
-    icon, // Add icon parameter
+    icon,
+    onClick,
     ...props
 }) => {
     const baseClasses = "rounded-md transition-colors flex items-center justify-center font-medium text-sm  w-full sm:w-auto";
@@ -37,6 +39,7 @@ const Button: React.FC<ButtonProps> = ({
             <a
                 href={href}
                 className={combinedClasses}
+                onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
                 {...props as React.AnchorHTMLAttributes<HTMLAnchorElement>}
             >
                 {content}
@@ -47,6 +50,7 @@ const Button: React.FC<ButtonProps> = ({
     return (
         <button
             className={combinedClasses}
+            onClick={onClick}
             {...props}
         >
             {content}

@@ -7,7 +7,7 @@ interface ContentListProps {
 
 export default function ContentList({ items }: ContentListProps) {
   return (
-    <div className="  p-6 rounded-xl shadow-lg space-y-6">
+    <div className=" w-full bg-background-light dark:bg-background-dark   p-6   space-y-6">
       {items.map((item, index) => (
         <ContentCard key={index} {...item} />
       ))}

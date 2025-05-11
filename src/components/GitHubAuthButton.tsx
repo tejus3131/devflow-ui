@@ -1,9 +1,7 @@
 // filepath: /home/tojomojo/projects/devflow-ui/src/components/GitHubAuthButton.tsx
 "use client";
-import { useState } from "react";
-import { GithubIcon, User } from "lucide-react";
+import { GithubIcon } from "lucide-react";
 import { useUser } from "../hooks/useUser";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -12,7 +10,7 @@ interface GitHubAuthButtonProps {
 }
 
 const GitHubAuthButton: React.FC<GitHubAuthButtonProps> = ({ id }) => {
-  const { user, loading, signInWithGithub, signOut } = useUser();
+  const { user, loading, signInWithGithub } = useUser();
   const router = useRouter();
 
   const handleSignIn = async () => {

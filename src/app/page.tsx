@@ -14,8 +14,8 @@ export default function Home() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="max-w-3xl mx-auto">
+    <div className="container mx-auto px-4 py-12 ">
+      <div className="max-w-3xl mx-auto ">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
             {user ? `Welcome to Your App!` : "Welcome to Your App!"}
@@ -28,7 +28,7 @@ export default function Home() {
         </div>
 
         {user && (
-          <div className="bg-white shadow-md rounded-lg p-6 mt-8">
+          <div className="bg-primary-light dark:bg-primary-dark text-black dark:text-white shadow-sm rounded-lg p-6 mt-8">
             <h2 className="text-2xl font-semibold mb-4">Your Profile</h2>
             <div className="space-y-3">
               <p>
@@ -73,7 +73,7 @@ export default function Home() {
 
 
         {!user && (
-          <div className="bg-white shadow-md rounded-lg p-6 mt-8">
+          <div className="bg-primary-light dark:bg-neutral-900 shadow-sm rounded-lg p-6 mt-8">
             <h2 className="text-2xl font-semibold mb-4">Get Started</h2>
             <p className="text-gray-700 mb-4">
               Sign in with GitHub to access all features and personalize your

@@ -1,18 +1,10 @@
 "use client";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import supabase from "../lib/db";
-
-// Define the shape of the user object
-interface User {
-  id: string;
-  email: string;
-  avatar_url: string;
-  full_name: string;
-  user_name: string;
-}
+import { createContext, useState, useEffect, ReactNode } from "react";
+import supabase from "@/lib/db";
+import { User } from "@/lib/types";
 
 // Define the context value type
-interface UserContextValue {
+export interface UserContextValue {
   user: User | null;
   loading: boolean;
   signInWithGithub: () => Promise<void>;
@@ -36,7 +28,7 @@ export function UserProvider({ children }: UserProviderProps) {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data, error } = await supabase.auth.getUser();
+        const { data, error } = await supabase.clientAuth.getUser();
         if (error) {
           console.error("Error fetching user:", error);
           setUser(null);
@@ -48,6 +40,7 @@ export function UserProvider({ children }: UserProviderProps) {
             avatar_url: user_metadata.avatar_url || "",
             full_name: user_metadata.full_name || "",
             user_name: user_metadata.user_name || "",
+            bio: user_metadata.bio || ""
           });
         } else {
           setUser(null);
@@ -61,7 +54,7 @@ export function UserProvider({ children }: UserProviderProps) {
     };
 
     // Also subscribe to auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    const { data: authListener } = supabase.clientAuth.onAuthStateChange(
       (event, session) => {
         if (event === "SIGNED_IN" && session?.user) {
           const { id, email, user_metadata } = session.user;
@@ -71,6 +64,7 @@ export function UserProvider({ children }: UserProviderProps) {
             avatar_url: user_metadata.avatar_url || "",
             full_name: user_metadata.full_name || "",
             user_name: user_metadata.user_name || "",
+            bio: user_metadata.bio || ""
           });
         } else if (event === "SIGNED_OUT") {
           setUser(null);
@@ -92,13 +86,13 @@ export function UserProvider({ children }: UserProviderProps) {
 
   // Auth functions
   const signInWithGithub = async () => {
-    await supabase.auth.signInWithOAuth({
+    await supabase.clientAuth.signInWithOAuth({
       provider: "github",
     });
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.clientAuth.signOut();
     setUser(null);
   };
 

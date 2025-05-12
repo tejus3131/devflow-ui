@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import React, { useEffect, useCallback } from "react";
-import { useModalContext } from "../context/ModalContext";
+import React, { useEffect, useCallback, useState } from "react";
+import { useModal } from "../hooks/useModal";
 
 const Modal = ({
   tag,
@@ -9,19 +8,28 @@ const Modal = ({
   heading,
   modalClass,
   closable = true,
+  closeButton = true,
 }: {
   tag: string;
   children: React.ReactNode;
   heading: string;
   modalClass?: string;
   closable?: boolean;
+  closeButton?: boolean;
 }) => {
-
-  const { modals, isOpen, closeModal } = useModalContext();
+  const { isOpen, closeModal } = useModal();
+  // Track animation state separately from modal visibility
+  const [isVisible, setIsVisible] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   const close = useCallback(() => {
     if (closable) {
-      closeModal(tag);
+      // Start closing animation
+      setIsVisible(false);
+      // Delay actual closing to allow animation to complete
+      setTimeout(() => {
+        closeModal(tag);
+      }, 300); // Animation duration
     } else {
       console.error("Modal is not closable");
     }
@@ -29,66 +37,99 @@ const Modal = ({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && isOpen(tag)) {
         close();
       }
     };
-    
+
     window.addEventListener("keydown", handleKeyDown);
-    
+
     // Cleanup event listener when component unmounts
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [close]);
+  }, [close, isOpen, tag]);
 
-  if (!isOpen(tag)) return null;
+  // Control the render status and animation based on isOpen
+  useEffect(() => {
+    if (isOpen(tag)) {
+      setShouldRender(true);
+      // Small delay to allow DOM to update before starting animation
+      setTimeout(() => {
+        setIsVisible(true);
+      }, 10);
+    } else {
+      setIsVisible(false);
+      // Remove from DOM after animation completes
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, tag]);
+
+  if (!shouldRender) return null;
 
   const headingId = `modal-heading-${tag}`;
   const contentId = `modal-content-${tag}`;
 
   return (
-    <div 
-        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[var(--color-background-light)] dark:bg-[var(--color-background-dark)] text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={headingId}
-        aria-describedby={contentId}
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[rgba(0,0,0,0.8)] text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] transition-opacity duration-300 ease-in-out ${
+        isVisible ? "opacity-100" : "opacity-0"
+      }`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={headingId}
+      aria-describedby={contentId}
+      onClick={closable ? close : undefined}
     >
-        {/* Modal */}
-        <article 
-            className="rounded-lg w-full max-w-4xl p-6 sm:p-8 z-50 relative max-h-full overflow-y-auto bg-[var(--color-background-light)] dark:bg-[var(--color-background-dark)] text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] border border-[var(--color-border-light)] dark:border-[var(--color-border-dark)]"
-            itemScope
-            itemType="https://schema.org/WebPageElement"
-        >
-            <header className="flex items-center justify-between mb-4 relative">
-                <h2 
-                    id={headingId}
-                    className="text-xl sm:text-3xl font-semibold w-full text-center text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)]"
-                    itemProp="name"
-                >
-                    {heading}
-                </h2>
-                {closable && (
-                    <button
-                        onClick={close}
-                        className="absolute right-0 text-2xl text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)]"
-                        aria-label="Close modal"
-                        type="button"
-                    >
-                        ✖
-                    </button>
-                )}
-            </header>
+      {/* Modal */}
+<article
+  className={`rounded-lg z-50 max-h-full overflow-y-auto bg-[var(--color-background-light)] dark:bg-[var(--color-background-dark)] text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] border border-[var(--color-border-light)] dark:border-[var(--color-border-dark)] transition-all duration-300 ease-in-out min-w-[320px] sm:min-w-[480px] ${
+    isVisible 
+      ? "opacity-100 scale-100 translate-y-0" 
+      : "opacity-0 scale-95 translate-y-4"
+  }`}
+  itemScope
+  itemType="https://schema.org/WebPageElement"
+  onClick={(e) => e.stopPropagation()}
+>
 
-            <section 
-                id={contentId} 
-                className={`${modalClass || ''}`}
-                itemProp="mainContentOfPage"
+        {/* Modal header with border bottom */}
+        <header className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border-dark)] py-5 px-5">
+          <div className="flex items-center justify-between">
+            <h2
+              id={headingId}
+              className="text-xl sm:text-2xl font-semibold text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] px-2"
+              itemProp="name"
             >
-                {children}
-            </section>
-        </article>
+              {heading}
+            </h2>
+            {closeButton && closable && (
+                <button
+                onClick={close}
+                className="text-center ml-4  text-red-400 flex items-center justify-center w-7 h-7 rounded-full hover:bg-[var(--color-border-light)] dark:hover:bg-[var(--color-border-dark)] transition-colors"
+                aria-label="Close modal"
+                type="button"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Modal content */}
+        <section
+          id={contentId}
+          className={`p-6 sm:p-8 ${modalClass || ''}`}
+          itemProp="mainContentOfPage"
+        >
+          {children}
+        </section>
+      </article>
     </div>
   );
 };

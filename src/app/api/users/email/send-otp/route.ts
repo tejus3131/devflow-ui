@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { ApiResponse } from "@/lib/types";
 import { requestOtp } from "@/lib/email/manager";
 
-export async function PUT(req: Request) {
+export async function POST(req: Request) {
   try {
     const { email, full_name } = await req.json();
-    await requestOtp(email, full_name);
-    const response: ApiResponse<null> = {
+    const otp_id = await requestOtp(email, full_name);
+    const response: ApiResponse<string> = {
       status: 200,
       success: true,
       message: "OTP sent successfully",
-      data: null,
+      data: otp_id,
     };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {

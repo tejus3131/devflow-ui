@@ -41,18 +41,53 @@ export async function requestOtp(email: string, firstName: string) {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
   // Store OTP
-  const { error } = await supabase.clientTable.from('email_otps').insert({
+  const { data, error } = await supabase.clientTable.from('email_otps').insert({
     email,
     otp,
     purpose: 'email_change',
     expires_at: expiresAt.toISOString(),
-  });
+  }).select().single();
 
   if (error) throw new Error('Failed to save OTP');
 
   await sendOtpEmail({ email, otp, firstName });
 
-  return { success: true };
+  return data.id;
+}
+
+export async function resendOtp(oldOTPId: string) {
+
+  const { data: oldOtpData, error: oldOtpError } = await supabase.clientTable
+    .from('email_otps')
+    .select('*')
+    .eq('id', oldOTPId)
+    .single();
+  if (oldOtpError || !oldOtpData) {
+    throw new Error('Failed to fetch old OTP data');
+  }
+  const { email, first_name: firstName } = oldOtpData;
+
+  await supabase.clientTable
+    .from('email_otps')
+    .delete()
+    .eq('id', oldOTPId);
+
+  const otp = generateOtp();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+  // Store OTP
+  const { data, error } = await supabase.clientTable.from('email_otps').insert({
+    email,
+    otp,
+    purpose: 'email_change',
+    expires_at: expiresAt.toISOString(),
+  }).select().single();
+
+  if (error) throw new Error('Failed to save OTP');
+
+  await sendOtpEmail({ email, otp, firstName });
+
+  return data.id;
 }
 
 export async function verifyOtp(email: string, otp: string) {
@@ -61,26 +96,27 @@ export async function verifyOtp(email: string, otp: string) {
     .select('*')
     .eq('email', email)
     .eq('otp', otp)
-    .eq('used', false)
     .eq('purpose', 'email_change')
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(1)
+    .single();
+
+  console.log('response from supabase:', { data, error });
 
   if (error || !data || data.length === 0) {
     throw new Error('Invalid OTP');
   }
 
-  const otpEntry = data[0];
 
-  if (new Date(otpEntry.expires_at) < new Date()) {
+  if (new Date(data.expires_at) < new Date()) {
     throw new Error('OTP expired');
   }
 
   // Mark as used
   await supabase.clientTable
     .from('email_otps')
-    .update({ used: true })
-    .eq('id', otpEntry.id);
+    .delete()
+    .eq('id', data.id);
 
   return { verified: true };
 }

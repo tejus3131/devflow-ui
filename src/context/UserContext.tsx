@@ -1,14 +1,16 @@
 "use client";
 import { createContext, useState, useEffect, ReactNode } from "react";
 import supabase from "@/lib/db";
-import { User } from "@/lib/types";
+import { UserDetail } from "@/lib/types";
+import { getUserById } from "@/lib/data/users"
 
 // Define the context value type
 export interface UserContextValue {
-  user: User | null;
+  user: UserDetail | null;
   loading: boolean;
-  signInWithGithub: () => Promise<void>;
+  signInWithGithub: (redirectUrl: string) => Promise<void>;
   signOut: () => Promise<void>;
+  reloadUser: () => Promise<void>;
 }
 
 // Create the context with a default value of `null`
@@ -21,7 +23,7 @@ interface UserProviderProps {
 
 // Provider component
 export function UserProvider({ children }: UserProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Check for user on mount and when hash changes (for OAuth redirects)
@@ -30,23 +32,15 @@ export function UserProvider({ children }: UserProviderProps) {
       try {
         const { data, error } = await supabase.clientAuth.getUser();
         if (error) {
-          console.error("Error fetching user:", error);
           setUser(null);
         } else if (data?.user) {
-          const { id, email, user_metadata } = data.user;
-          setUser({
-            id,
-            email: email || "",
-            avatar_url: user_metadata.avatar_url || "",
-            full_name: user_metadata.full_name || "",
-            user_name: user_metadata.user_name || "",
-            bio: user_metadata.bio || ""
-          });
+          const { id } = data.user;
+          const user = await getUserById(id);
+          setUser(user);
         } else {
           setUser(null);
         }
       } catch (error) {
-        console.error("Unexpected error:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -55,17 +49,10 @@ export function UserProvider({ children }: UserProviderProps) {
 
     // Also subscribe to auth state changes
     const { data: authListener } = supabase.clientAuth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (event === "SIGNED_IN" && session?.user) {
-          const { id, email, user_metadata } = session.user;
-          setUser({
-            id,
-            email: email || "",
-            avatar_url: user_metadata.avatar_url || "",
-            full_name: user_metadata.full_name || "",
-            user_name: user_metadata.user_name || "",
-            bio: user_metadata.bio || ""
-          });
+          const { id } = session.user;
+          setUser(await getUserById(id));
         } else if (event === "SIGNED_OUT") {
           setUser(null);
         }
@@ -85,15 +72,39 @@ export function UserProvider({ children }: UserProviderProps) {
   }, []);
 
   // Auth functions
-  const signInWithGithub = async () => {
+  const signInWithGithub = async (redirectUrl: string) => {
     await supabase.clientAuth.signInWithOAuth({
       provider: "github",
+      options: {
+        redirectTo: redirectUrl,
+      },
     });
   };
 
   const signOut = async () => {
     await supabase.clientAuth.signOut();
     setUser(null);
+  };
+
+  const reloadUser = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.clientAuth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error);
+        setUser(null);
+      } else if (data?.user) {
+        const { id } = data.user;
+        setUser(await getUserById(id));
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -103,6 +114,7 @@ export function UserProvider({ children }: UserProviderProps) {
         loading,
         signInWithGithub,
         signOut,
+        reloadUser,
       }}
     >
       {children}

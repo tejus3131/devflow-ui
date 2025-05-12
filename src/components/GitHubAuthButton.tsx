@@ -3,7 +3,7 @@
 import { GithubIcon } from "lucide-react";
 import { useUser } from "../hooks/useUser";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 
 interface GitHubAuthButtonProps {
   id?: string; // Add id prop
@@ -15,7 +15,7 @@ const GitHubAuthButton: React.FC<GitHubAuthButtonProps> = ({ id }) => {
 
   const handleSignIn = async () => {
     try {
-      await signInWithGithub();
+      await signInWithGithub(`${window.location}`);
     } catch (error) {
       console.error("Authentication error:", error);
     }
@@ -23,7 +23,7 @@ const GitHubAuthButton: React.FC<GitHubAuthButtonProps> = ({ id }) => {
 
   const handleProfileClick = () => {
     if (user?.user_name) {
-      router.push(`/${user.user_name}`);
+      router.push(`/${user.user_name}/profile`);
     }
   };
 

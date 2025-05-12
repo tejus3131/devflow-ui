@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-interface ModalContextType {
+export interface ModalContextType {
   modals: Record<string, boolean>;
   isOpen: (modalName: string) => boolean;
   openModal: (modalName: string) => void;
   closeModal: (modalName: string) => void;
 }
 
-const ModalContext = createContext<ModalContextType | undefined>(undefined);
+export const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
 export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [modals, setModals] = useState<Record<string, boolean>>({});
@@ -34,12 +34,4 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </ModalContext.Provider>
   );
-};
-
-export const useModalContext = (): ModalContextType => {
-  const context = useContext(ModalContext);
-  if (!context) {
-    throw new Error("useModalContext must be used within a ModalProvider");
-  }
-  return context;
 };

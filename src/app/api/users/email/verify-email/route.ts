@@ -6,6 +6,7 @@ import { verifyOtp } from "@/lib/email/manager"
 export async function POST(req: Request) {
   try {
     const { email, user_id, otp } = await req.json();
+    console.log("Received data:", { email, user_id, otp });
     await verifyOtp(email, otp);
     await updateUserEmail(user_id, email);
     const response: ApiResponse<null> = {

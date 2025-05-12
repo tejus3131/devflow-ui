@@ -3,7 +3,7 @@ import PageHeader from "../../components/PageHeader";
 import ContentCardList from "../../components/ContentCardList";
 import { ContentCardProps } from "../../components/ContentCard";
 import Button from "@/components/Button";
-import { useModalContext } from "@/context/ModalContext";
+import { useModal } from "@/hooks/useModal";
 const demoData: ContentCardProps[] = [
   {
     name: "Repository A",
@@ -91,7 +91,7 @@ const demoData: ContentCardProps[] = [
 ];
 export default function Page() {
 
-  const {openModal} = useModalContext();
+  const {openModal} = useModal();
   const sampleBreadcrumbs = {
     items: [
       { label: "Alice Johnson", href: "/alice-johnson" },

@@ -12,22 +12,22 @@ export async function PUT(req: Request) {
       throw new Error("Invalid input");
     }
 
-    await updateUserAvatar(user_id, file);
+    const newUrl = await updateUserAvatar(user_id, file);
 
-    const response: ApiResponse<null> = {
+    const response: ApiResponse<string> = {
       status: 200,
       success: true,
       message: "User avatar updated successfully",
-      data: null,
+      data: newUrl,
     };
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("Error updating user avatar:", error);
-    const response: ApiResponse<null> = {
+    const response: ApiResponse<string> = {
       status: 400,
       success: false,
       message: "Failed to update user avatar",
-      data: null,
+      data: "Failed to update user avatar",
     };
     return NextResponse.json(response, { status: 400 });
   }

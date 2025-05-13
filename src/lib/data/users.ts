@@ -1,5 +1,5 @@
 import supabase from "@/lib/db";
-import { BadgeDetail, UserDetail } from "@/lib/types";
+import { BadgeDetail, Connection, Connections, UserConnection, UserDetail } from "@/lib/types";
 
 async function getUserIdByUsername(username: string): Promise<string> {
     const { data, error } = await supabase.clientTable.from("user_profile").select("id").eq("username", username).single();
@@ -393,5 +393,219 @@ export async function getBadgeById(badge_id: string): Promise<BadgeDetail> {
         name: data.name,
         description: data.description,
         image_url: data.image_url
+    };
+}
+
+export async function getUserConnectionCount(user_id: string): Promise<number> {
+    const { data, error } = await supabase.clientTable
+        .from("connections")
+        .select("*")
+        .or(`initiator.eq.${user_id},target.eq.${user_id}`)
+        .eq("status", "accepted");
+    if (error) {
+        console.error("Error fetching user connection count:", error);
+        throw new Error("Failed to fetch user connection count");
+    }
+    if (!data) {
+        console.error("User not found");
+        throw new Error("User not found");
+    }
+    return data.length;
+}
+
+export async function getUserConnections(user_id: string): Promise<Connections> {
+    // Fetch all connections for this user
+    const { data, error } = await supabase.clientTable
+        .from("connections")
+        .select("*")
+        .or(`initiator.eq.${user_id},target.eq.${user_id}`);
+
+    if (error) {
+        console.error("Error fetching user connections:", error);
+        throw new Error("Failed to fetch user connections");
+    }
+    
+    if (!data || data.length === 0) {
+        // Return empty arrays if no connections found
+        return {
+            outgoing_requests: [],
+            incoming_requests: [],
+            active_connections: [],
+            blocked_users: []
+        };
+    }
+
+    const outgoing_requests: UserConnection[] = [];
+    const incoming_requests: UserConnection[] = [];
+    const active_connections: UserConnection[] = [];
+    const blocked_users: UserConnection[] = [];
+
+    // Process connections in parallel
+    await Promise.all(data.map(async (item) => {
+        const isInitiator = item.initiator === user_id;
+        const otherUserId = isInitiator ? item.target : item.initiator;
+        
+        try {
+            const userDetail = await getUserById(otherUserId);
+            const connection: UserConnection = {
+                user_name: userDetail.user_name,
+                full_name: userDetail.full_name,
+                avatar_url: userDetail.avatar_url
+            };
+
+            // Categorize the connection
+            if (item.status === "accepted") {
+                active_connections.push(connection);
+            } else if (item.status === "blocked") {
+                if (isInitiator) {
+                    blocked_users.push(connection);
+                } else {
+                    // Only track blocks initiated by this user
+                    incoming_requests.push(connection);
+                }
+            } else {
+                // Connection is pending or has another status
+                if (isInitiator) {
+                    outgoing_requests.push(connection);
+                } else {
+                    incoming_requests.push(connection);
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching user details for user_id ${otherUserId} in connection ${item.id}:`, error);
+            throw new Error(`Failed to fetch user details for connection ${item.id}`);
+        }
+    }));
+
+    return {
+        outgoing_requests,
+        incoming_requests,
+        active_connections,
+        blocked_users
+    };
+}
+
+export async function getConnectionById(connection_id: string): Promise<Connection> {
+    const { data, error } = await supabase.clientTable
+        .from("connections")
+        .select("*")
+        .eq("id", connection_id)
+        .single();
+
+    if (error) {
+        console.error("Error fetching connection:", error);
+        throw new Error("Failed to fetch connection");
+    }
+    if (!data) {
+        console.error("Connection not found");
+        throw new Error("Connection not found");
+    }
+
+    return {
+        id: connection_id,
+        initiator: data.initiator,
+        target: data.target,
+        status: data.status
+    };
+}
+
+export async function initiateConnection(initiator_id: string, target_id: string): Promise<Connection> {
+    const { data, error } = await supabase.clientTable
+        .from("connections")
+        .insert({
+            initiator: initiator_id,
+            target: target_id,
+            status: "pending"
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error initiating connection:", error);
+        throw new Error("Failed to initiate connection");
+    }
+
+    if (!data) {
+        console.error("Connection not found");
+        throw new Error("Connection not found");
+    }
+
+    return {
+        id: data.id,
+        initiator: data.initiator,
+        target: data.target,
+        status: data.status
+    };
+}
+
+export async function acceptConnection(connection_id: string): Promise<void> {
+    const { error } = await supabase.clientTable
+        .from("connections")
+        .update({ status: "accepted" })
+        .eq("id", connection_id);
+
+    if (error) {
+        console.error("Error accepting connection:", error);
+        throw new Error("Failed to accept connection");
+    }
+}
+
+export async function declineConnection(connection_id: string): Promise<void> {
+    const { error } = await supabase.clientTable
+        .from("connections")
+        .update({ status: "declined" })
+        .eq("id", connection_id);
+
+    if (error) {
+        console.error("Error declining connection:", error);
+        throw new Error("Failed to decline connection");
+    }
+}
+
+export async function blockConnection(connection_id: string): Promise<void> {
+    const { error } = await supabase.clientTable
+        .from("connections")
+        .update({ status: "blocked" })
+        .eq("id", connection_id);
+
+    if (error) {
+        console.error("Error blocking connection:", error);
+        throw new Error("Failed to block connection");
+    }
+}
+
+export async function deleteConnection(connection_id: string): Promise<void> {
+    const { error } = await supabase.clientTable
+        .from("connections")
+        .delete()
+        .eq("id", connection_id);
+
+    if (error) {
+        console.error("Error deleting connection:", error);
+        throw new Error("Failed to delete connection");
+    }
+}
+
+export async function getConnectionByInitiatorAndTarget(initiator_id: string, target_id: string): Promise<Connection | null> {
+    const { data, error } = await supabase.clientTable
+        .from("connections")
+        .select("*")
+        .or(`and(initiator.eq.${initiator_id},target.eq.${target_id}),and(initiator.eq.${target_id},target.eq.${initiator_id})`)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching connection:", error);
+        throw new Error("Failed to fetch connection");
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    return {
+        id: data.id,
+        initiator: data.initiator,
+        target: data.target,
+        status: data.status
     };
 }

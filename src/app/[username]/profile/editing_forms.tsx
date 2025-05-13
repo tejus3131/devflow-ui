@@ -1101,7 +1101,7 @@ export const BioForm: React.FC<BioFormsProps> = ({
                 <div className="flex justify-end space-x-3">
                     <button
                         type="button"
-                        onClick={() => closeModal('full_name_edit')}
+                        onClick={() => closeModal('bio_edit')}
                         disabled={processing}
                         className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-center
                             bg-transparent border border-[var(--color-border-light)] dark:border-[var(--color-border-dark)]

@@ -94,7 +94,7 @@ const BadgeTray: React.FC<{ user_id: string }> = ({ user_id }) => {
     }
 
     return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-3 space-y-6 flex-wrap">
             {badges.map((badge_id) => (
                 <Badge key={badge_id} badge_id={badge_id} />
             ))}

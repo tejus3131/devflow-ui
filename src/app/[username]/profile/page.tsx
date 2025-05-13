@@ -18,13 +18,11 @@ import { useModal } from "@/hooks/useModal";
 import { AvatarForm, BioForm, EmailForm, FullNameForm, UserNameForm } from "./editing_forms";
 import { useRouter } from "next/navigation";
 import BadgeTray from "@/components/Badge";
+import { ConnectionButton, ConnectionCard, ConnectionManager } from "./connections";
+import StatsCard from "@/components/StatsCard";
 
 
-const connections = ["user2", "user3", "user4"];
 const favorites = ["post1", "post2", "post3"];
-const likes = ["post4", "post5"];
-const badges = ["Contributor", "Problem Solver", "Top Writer"];
-
 
 
 interface ProfilePageProps {
@@ -138,6 +136,7 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
         <UserNameForm initialValue={user.user_name!} userId={user.id!} setNewUserName={handleUsernameChange} />
         <AvatarForm initialUrl={user.avatar_url} userId={user.id!} onAvatarUpdate={(newAvatar) => setUser((prev) => (prev ? { ...prev, avatar_url: newAvatar } : prev))} />
         <BioForm initialValue={user.bio!} userId={user.id!} setNewBio={(newBio) => setUser((prev) => (prev ? { ...prev, bio: newBio } : prev))} />
+        <ConnectionManager user_id={user.id!} />
       </>
     )}
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-foreground-light dark:text-foreground-dark">
@@ -196,113 +195,111 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                 <div className="space-y-4 flex-grow">
                   <div className="flex flex-col ml-1">
                     {/* Full Name with gradient text */}
-                    <div className="group relative mt-2">
-
-                      <div className="flex items-center">
-                        <h2 className="text-3xl font-bold text-gradient bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark bg-clip-text text-transparent">
-                          {user?.full_name || "Anonymous User"}
-                        </h2>
-                        {isSelf && (
-                          <button
-                            onClick={() => openModal("email_edit")}
-                            className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
-                            aria-label="Edit email"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        )}
+                    <div className="relative mt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="group flex items-center" onClick={() => {
+                          if (isSelf) {
+                            openModal("full_name_edit");
+                          }
+                        }}>
+                          <h2 className="text-3xl font-bold text-gradient bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark bg-clip-text text-transparent">
+                            {user?.full_name || "Anonymous User"}
+                          </h2>
+                          {isSelf && (
+                            <div
+                              className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
+                              aria-label="Edit full name"
+                            >
+                              <Edit2 size={14} />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Email */}
-                    <div className="group relative mt-2">
-                      <div className="flex items-center">
+                    <div className="relative mt-2">
+                      <div className="group flex items-center" onClick={() => {
+                        if (isSelf) {
+                          openModal("email_edit");
+                        }
+                      }}>
                         <span className=" py-1 bg-neutral-light dark:bg-neutral-dark rounded-full text-on-neutral-light dark:text-on-neutral-dark text-sm font-medium">
                           {user?.email || "No email provided"}
                         </span>
                         {isSelf && (
-                          <button
-                            onClick={() => openModal("email_edit")}
+                          <div
                             className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
                             aria-label="Edit email"
                           >
                             <Edit2 size={14} />
-                          </button>
+                          </div>
                         )}
                       </div>
                     </div>
 
                     {/* Username - aligned with other text */}
-                    <div className="group relative mt-2">
-                      <div className="flex items-center">
+                    <div className="relative mt-2">
+                      <div className="group flex items-center" onClick={() => {
+                        if (isSelf) {
+                          openModal("user_name_edit");
+                        }
+                      }} >
                         <span className=" py-1 bg-neutral-light dark:bg-neutral-dark rounded-full text-on-neutral-light dark:text-on-neutral-dark text-sm font-medium">
                           @{user?.user_name || "username"}
                         </span>
                         {isSelf && (
-                          <button
-                            onClick={() => openModal("user_name_edit")}
+                          <div
                             className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
                             aria-label="Edit username"
                           >
                             <Edit2 size={14} />
-                          </button>
+                          </div>
                         )}
                       </div>
                     </div>
                   </div>
 
                   {/* Badges inline with user info */}
-                  <BadgeTray user_id={user.id} />
 
                   {/* Connections and Likes */}
+                </div>
+
+                <div className="flex flex-col">
+                  {selfUser && (<ConnectionButton user_id={selfUser!.id} profile_user_id={user.id} />)}
+                  <div className="mt-2 w-[150px] sm:w-[180px] mt-4"><BadgeTray user_id={user.id} /></div>
                 </div>
               </div>
 
               <div className="space-y-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-neutral-light dark:bg-neutral-dark border border-neutral-dark/20 dark:border-border-dark p-5 rounded-xl transition-colors shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-primary-light/20 dark:bg-primary-dark/20 rounded-lg">
-                        <MessageSquare
-                          className="text-primary-light dark:text-primary-dark"
-                          size={20}
-                        />
-                      </div>
-                      <p className="text-on-neutral-light dark:text-on-neutral-dark font-medium">
-                        Connections
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {connections.length}
-                    </p>
-                  </div>
-                  <div className="bg-neutral-light dark:bg-neutral-dark border border-neutral-dark/20 dark:border-border-dark p-5 rounded-xl transition-colors shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-success/20 rounded-lg">
-                        <BarChart className="text-success" size={20} />
-                      </div>
-                      <p className="text-on-neutral-light dark:text-on-neutral-dark font-medium">
-                        Likes
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">{likes.length}</p>
-                  </div>
+
+                  <ConnectionCard user_id={user.id} />
+                  <StatsCard
+                    title="Thoughts"
+                    value={4}
+                    icon={<BarChart size={20} />}
+                  />
                 </div>
               </div>
 
               {/* About Me Section */}
-              <div className="mt-8">
-                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <div className="mt-8"
+                onClick={() => {
+                  if (isSelf) {
+                    openModal("bio_edit");
+                  }
+                }}>
+                <h3 className="text-lg font-bold mb-3 flex items-center gap-2 group">
                   About Me
                   {isSelf && (
-                    <button
-                      className="p-1 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark hover:bg-primary-light/10 dark:hover:bg-primary-dark/20 transition-colors"
-                      aria-label="Edit bio"
-                      onClick={() => openModal("bio_edit")}
+                    <div
+                      className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
+                      aria-label="Edit username"
                     >
                       <Edit2 size={14} />
-                    </button>
+                    </div>
                   )}
                 </h3>
                 <div className="bg-neutral-light dark:bg-neutral-dark border border-neutral-dark/20 dark:border-border-dark p-4 rounded-xl">

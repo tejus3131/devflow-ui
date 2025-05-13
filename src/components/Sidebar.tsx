@@ -26,18 +26,17 @@ const Sidebar: React.FC = () => {
   const nav_links = [
     { href: "/", label: "Discover", icon: <Compass className="w-5 h-5" /> },
     {
-      href: "/messages",
+      href: `/${user?.user_name}/chats`,
       label: "Messages",
       icon: <MessageSquareTextIcon className="w-5 h-5" />,
     },
     {
-      href: "/repository",
-      label: "Repository",
+      href: `/${user?.user_name}/repositories`,
+      label: "Repositories",
       icon: <Database className="w-5 h-5" />,
     },
-    { href: "/blogs", label: "Blogs", icon: <BookOpen className="w-5 h-5" /> },
+    { href: `/${user?.user_name}/blogs`, label: "Blogs", icon: <BookOpen className="w-5 h-5" /> },
     { href: "/docs", label: "Docs", icon: <FileText className="w-5 h-5" /> },
-    { href: "/profile", label: "Profile", icon: <User className="w-5 h-5" /> },
   ];
 
   useEffect(() => {
@@ -119,9 +118,8 @@ const Sidebar: React.FC = () => {
                 />
               </div>
               <span
-                className={`font-semibold text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] absolute left-16 transition-opacity duration-300 ${
-                  expanded || mobileOpen ? "opacity-100" : "opacity-0"
-                }`}
+                className={`font-semibold text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] absolute left-16 transition-opacity duration-300 ${expanded || mobileOpen ? "opacity-100" : "opacity-0"
+                  }`}
               >
                 DevFlow
               </span>
@@ -135,19 +133,17 @@ const Sidebar: React.FC = () => {
                 key={link.href}
                 href={link.href}
                 onClick={() => mobileOpen && setMobileOpen(false)}
-                className={`flex items-center px-3 py-3 mx-2 rounded-md transition-colors duration-200 hover:bg-[var(--color-surface-light)] dark:hover:bg-[var(--color-surface-dark)] group ${
-                  pathname === link.href
-                    ? "text-[var(--color-primary-light)] dark:text-[var(--color-primary-dark)] bg-[var(--color-muted-light)] dark:bg-[var(--color-muted-dark)]"
-                    : "text-[var(--color-on-muted-light)] dark:text-[var(--color-on-muted-dark)] hover:text-[var(--color-foreground-light)] dark:hover:text-[var(--color-foreground-dark)]"
-                }`}
+                className={`flex items-center px-3 py-3 mx-2 rounded-md transition-colors duration-200 hover:bg-[var(--color-surface-light)] dark:hover:bg-[var(--color-surface-dark)] group ${pathname === link.href
+                  ? "text-[var(--color-primary-light)] dark:text-[var(--color-primary-dark)] bg-[var(--color-muted-light)] dark:bg-[var(--color-muted-dark)]"
+                  : "text-[var(--color-on-muted-light)] dark:text-[var(--color-on-muted-dark)] hover:text-[var(--color-foreground-light)] dark:hover:text-[var(--color-foreground-dark)]"
+                  }`}
               >
                 <div className="flex items-center justify-center">
                   {link.icon}
                 </div>
                 <span
-                  className={`ml-4 font-medium text-sm whitespace-nowrap transition-opacity duration-300 ${
-                    expanded || mobileOpen ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`ml-4 font-medium text-sm whitespace-nowrap transition-opacity duration-300 ${expanded || mobileOpen ? "opacity-100" : "opacity-0"
+                    }`}
                 >
                   {link.label}
                 </span>
@@ -172,9 +168,8 @@ const Sidebar: React.FC = () => {
                   <GitHubAuthButton id="github-auth-button" />
                 </div>
                 <div
-                  className={`ml-2 transition-opacity duration-300 whitespace-nowrap overflow-hidden text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] ${
-                    expanded || mobileOpen ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`ml-2 transition-opacity duration-300 whitespace-nowrap overflow-hidden text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] ${expanded || mobileOpen ? "opacity-100" : "opacity-0"
+                    }`}
                 >
                   {user === null ? "Continue with GitHub" : user.user_name}
                 </div>

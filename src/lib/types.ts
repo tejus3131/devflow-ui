@@ -1,28 +1,39 @@
 export interface UserDetail {
-    id: string;
-    email: string;
-    avatar_url: string;
-    full_name: string;
-    user_name: string;
-    bio: string;
+  id: string;
+  email: string;
+  avatar_url: string;
+  full_name: string;
+  user_name: string;
+  bio: string;
 }
 
 export interface ApiResponse<T> {
-    status: number;
-    success: boolean;
-    message: string;
-    data: T | null;
+  status: number;
+  success: boolean;
+  message: string;
+  data: T | null;
 }
 
-export type ConnectionStatus = 'requested' | 'accepted' | 'declined' | 'blocked';
+export type ConnectionStatus = 'pending' | 'accepted' | 'declined' | 'blocked';
 
 export interface Connection {
   id: string;
   initiator: string;
   target: string;
-  created_at: string;
-  updated_at: string;
   status: ConnectionStatus;
+}
+
+export interface UserConnection {
+  user_name: string;
+  full_name: string;
+  avatar_url: string;
+}
+
+export interface Connections {
+  outgoing_requests: UserConnection[];
+  incoming_requests: UserConnection[];
+  active_connections: UserConnection[];
+  blocked_users: UserConnection[];
 }
 
 export interface BadgeDetail {
@@ -30,4 +41,24 @@ export interface BadgeDetail {
   name: string;
   description: string;
   image_url: string;
+}
+
+export interface RepositoryDetail {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  author_id: string;
+  tags: string[];
+}
+
+export type VoteType = 'upvote' | 'downvote' | null;
+export type ContentType = "Repository" | "Component" | "Configuration" | "Flavour";
+
+
+export interface Vote {
+  id: string;
+  user_id: string;
+  repo_id?: string;
+  vote: VoteType;
 }

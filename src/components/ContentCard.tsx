@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX, useState } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Folder,
@@ -9,44 +9,47 @@ import {
   Palette,
   ThumbsUp,
   ThumbsDown,
-  Users,
   Tag,
   CircleArrowRight,
 } from "lucide-react";
 import { Breadcrumb, BreadcrumbProps } from "./Breadcrumb";
-import Button from "./Button";
+import { Button } from "./Button";
+import Image from "next/image";
+import { ContentType, VoteType } from "@/lib/types";
+import { useUser } from "@/hooks/useUser";
 
-type VoteType = "up" | "down" | null;
-
-type ContentType = "Repository" | "Component" | "Configuration" | "Flavour";
 
 export interface ContentCardProps {
+  id: string;
   name: string;
   description: string;
   location: BreadcrumbProps;
   type: ContentType;
-  authors: string[];
+  author: { user_name: string, avatar_url: string };
   tags: string[];
   upvotes: number;
   downvotes: number;
   userVote: VoteType;
-  className: string;
 }
 
 export function ContentCard({
+  id,
   name,
   description,
   location,
   type,
-  authors,
+  author,
   tags,
   upvotes,
   downvotes,
   userVote,
-  className,
 }: ContentCardProps): JSX.Element {
   const [localUserVoteType, setLocalUserVoteType] =
     useState<VoteType>(userVote);
+  const [localUpvotes, setLocalUpvotes] = useState<number>(upvotes);
+  const [localDownvotes, setLocalDownvotes] = useState<number>(downvotes);
+
+  const { user } = useUser();
 
   const typeStyles: Record<
     ContentType,
@@ -81,130 +84,152 @@ export function ContentCard({
   const currentTypeStyle = typeStyles[type];
   const TypeIcon = currentTypeStyle.icon;
 
+  const setVoteInDB = async (voteType: VoteType) => {
+    if (!user) return;
+    fetch(`/api/repositories/${id}/votes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        vote_type: voteType,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          console.log("Vote updated successfully");
+        } else {
+          console.error("Error updating vote:", data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating vote:", error);
+      }
+      );
+  }
+
   const handleUpvote = () => {
-    if (localUserVoteType === "up") {
+    if (localUserVoteType === "upvote") {
+      setLocalUpvotes(localUpvotes - 1);
       setLocalUserVoteType(null);
-      // onUpvote(false);
+      setVoteInDB(null);
     } else {
-      setLocalUserVoteType("up");
-      // onUpvote(true);
+      setLocalUpvotes(localUpvotes + 1);
+      if (localUserVoteType === "downvote") {
+        setLocalDownvotes(localDownvotes - 1);
+      }
+      setLocalUserVoteType("upvote");
+      setVoteInDB("upvote");
     }
   };
 
   const handleDownvote = () => {
-    if (localUserVoteType === "down") {
+    if (localUserVoteType === "downvote") {
+      setLocalDownvotes(localDownvotes - 1);
       setLocalUserVoteType(null);
-      // onDownvote(false);
+      setVoteInDB(null);
     } else {
-      setLocalUserVoteType("down");
-      // onDownvote(true);
+      setLocalDownvotes(localDownvotes + 1);
+      if (localUserVoteType === "upvote") {
+        setLocalUpvotes(localUpvotes - 1);
+      }
+      setLocalUserVoteType("downvote");
+      setVoteInDB("downvote");
     }
   };
 
+
+
   return (
-    <div className={`rounded-lg shadow-sm overflow-hidden ${className}`}>
+    <div className={`rounded-lg shadow-sm overflow-hidden`}>
       <div className="p-4 sm:p-6 bg-muted-light dark:bg-muted-dark text-on-muted-light dark:text-on-muted-dark">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
-        <div
-          className={`inline-flex items-center px-2.5 py-1.5 rounded-full border text-sm font-medium w-fit ${currentTypeStyle.bgColor} ${currentTypeStyle.textColor}`}
-        >
-          <TypeIcon className="w-4 h-4 mr-1" />
-          {type}
-        </div>
-
-        <div className="flex items-center gap-3">
-        <button
-          onClick={handleUpvote}
-          className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-          localUserVoteType === "up"
-            ? "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300"
-            : "bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark hover:bg-muted-light dark:hover:bg-border-dark"
-          }`}
-        >
-          <ThumbsUp className="w-4 h-4" />
-          <span>
-          {localUserVoteType === null
-            ? upvotes
-            : localUserVoteType === "up"
-            ? upvotes + 1
-            : upvotes}
-          </span>
-        </button>
-
-        <button
-          onClick={handleDownvote}
-          className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-          localUserVoteType === "down"
-            ? "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300"
-            : "bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark hover:bg-muted-light dark:hover:bg-border-dark"
-          }`}
-        >
-          <ThumbsDown className="w-4 h-4" />
-          <span>
-          {localUserVoteType === null
-            ? downvotes
-            : localUserVoteType === "down"
-            ? downvotes + 1
-            : downvotes}
-          </span>
-        </button>
-        </div>
-      </div>
-
-      <h3 className="text-lg sm:text-xl font-semibold text-foreground-light dark:text-foreground-dark mb-2">
-        {name}
-      </h3>
-      <p className="text-sm sm:text-base text-foreground-light dark:text-foreground-dark/50 mb-4 line-clamp-3">
-        {description}
-      </p>
-
-      {authors.length > 0 && (
-        <div className="flex items-center mb-4 flex-wrap">
-        <Users className="w-4 h-4 text-on-muted-light dark:text-on-muted-dark mr-2" />
-        <div className="flex flex-wrap gap-2">
-          {authors.map((author, index) => (
-          <span
-            key={index}
-            className="text-xs sm:text-sm text-on-muted-light dark:text-on-muted-dark font-medium"
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
+          <div
+            className={`inline-flex items-center px-2.5 py-1.5 rounded-full border text-sm font-medium w-fit ${currentTypeStyle.bgColor} ${currentTypeStyle.textColor}`}
           >
-            {author}
-            {index < authors.length - 1 ? "," : ""}
-          </span>
-          ))}
-        </div>
-        </div>
-      )}
+            <TypeIcon className="w-4 h-4 mr-1" />
+            {type}
+          </div>
 
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-        {tags.map((tag, index) => (
-          <span
-          key={index}
-          className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark"
-          >
-          <Tag className="w-3 h-3 mr-1" />
-          {tag}
-          </span>
-        ))}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleUpvote}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md ${localUserVoteType === "upvote"
+                ? "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300"
+                : "bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark hover:bg-muted-light dark:hover:bg-border-dark"
+                }`}
+            >
+              <ThumbsUp className="w-4 h-4" />
+              <span>{localUpvotes}</span>
+            </button>
+
+            <button
+              onClick={handleDownvote}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md ${localUserVoteType === "downvote"
+                ? "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300"
+                : "bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark hover:bg-muted-light dark:hover:bg-border-dark"
+                }`}
+            >
+              <ThumbsDown className="w-4 h-4" />
+              <span>{localDownvotes}</span>
+            </button>
+          </div>
         </div>
-      )}
+
+        <h3 className="text-lg sm:text-xl font-semibold text-foreground-light dark:text-foreground-dark mb-2">
+          {name}
+        </h3>
+        <p className="text-sm sm:text-base text-foreground-light dark:text-foreground-dark/50 mb-4 line-clamp-3">
+          {description}
+        </p>
+
+        <Link className="flex items-center gap-2 mb-4" href={`/${author.user_name}/profile`}>
+          <Image
+            alt={author.user_name}
+            src={author.avatar_url}
+            className="w-8 h-8 rounded-full"
+            width={32}
+            height={32}
+          />
+          <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
+            @{author.user_name}
+          </span>
+        </Link>
+
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {tags.map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-surface-light dark:bg-accent-dark text-on-surface-light dark:text-on-accent-dark"
+              >
+                <Tag className="w-3 h-3 mr-1" />
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="border-border-light dark:border-border-dark bg-neutral-light dark:bg-neutral-dark p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-        <div className="text-xs sm:text-sm text-on-neutral-light dark:text-on-neutral-dark w-full sm:w-auto overflow-x-auto">
-        <Breadcrumb items={location.items} />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+          <div className="text-xs sm:text-sm text-on-neutral-light dark:text-on-neutral-dark w-full sm:w-auto overflow-x-auto">
+            <Breadcrumb items={location.items} />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link href={`/${location.items[0].href}`} className="w-full sm:w-auto">
+              <Button
+                variant="primary"
+                className="py-1.5 sm:py-2 px-3 sm:px-5 w-full sm:w-auto text-sm"
+                icon={<CircleArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />}
+              >
+                Discover
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-        <Link href={`/${location.items[0].href}`} className="w-full sm:w-auto">
-          <Button variant="primary" 
-          className="py-1.5 sm:py-2 px-3 sm:px-5 w-full sm:w-auto text-sm">
-          Discover
-          <CircleArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-          </Button>
-        </Link>
-        </div>
-      </div>
       </div>
     </div>
   );

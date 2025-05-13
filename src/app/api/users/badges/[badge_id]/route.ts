@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiResponse, Badge } from "@/lib/types";
+import { ApiResponse, BadgeDetail } from "@/lib/types";
 import { getBadgeById } from '@/lib/data/users'
 
 export async function GET(_req: Request, { params }: { params: { badge_id: string } }) {
@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: { badge_id: strin
     }
     try {
         const badge = await getBadgeById(badge_id);
-        const response: ApiResponse<Badge> = {
+        const response: ApiResponse<BadgeDetail> = {
             status: 200,
             success: true,
             message: "Badge fetched successfully",

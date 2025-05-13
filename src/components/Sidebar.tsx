@@ -10,7 +10,7 @@ import {
   Database,
   BookOpen,
   MessageSquareTextIcon,
-  User,
+
   Menu,
   X,
 } from "lucide-react";
@@ -26,7 +26,7 @@ const Sidebar: React.FC = () => {
   const nav_links = [
     { href: "/", label: "Discover", icon: <Compass className="w-5 h-5" /> },
     {
-      href: `/${user?.user_name}/chats`,
+      href: `/messages`,
       label: "Messages",
       icon: <MessageSquareTextIcon className="w-5 h-5" />,
     },

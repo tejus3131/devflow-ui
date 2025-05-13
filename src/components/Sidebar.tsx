@@ -90,7 +90,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 w-full  bg-background-light dark:bg-background-dark bg-opacity-50 z-[55] md:hidden"
+          className="fixed inset-0 w-full   bg-background-light dark:bg-background-dark bg-opacity-50 z-[55] md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}

@@ -1,31 +1,25 @@
 import supabase from "@/lib/db";
-import { Vote, VoteType } from "@/lib/types";
+import { Response, Vote, VoteType } from "@/lib/types";
 
-export const getVotesByRepoId = async (repoId: string): Promise<Vote[]> => {
+export const getVotesByRepoId = async (repoId: string): Response<Vote[]> => {
     const { data, error } = await supabase.clientTable
         .from("votes")
         .select("*")
         .eq("repo_id", repoId);
-
-    if (error) {
-        console.error("Error fetching votes:", error);
-        throw new Error("Failed to fetch votes");
-    }
-
-    return data as Vote[];
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Votes fetched successfully", data: data as Vote[] };
 }
 
-export const upvoteRepository = async (repoId: string, userId: string): Promise<Vote> => {
+export const upvoteRepository = async (repoId: string, userId: string): Response<Vote> => {
 
-    const existingVote = await getVoteByRepoIdAndUserId(repoId, userId);
-    if (existingVote) {
-        if (existingVote.vote === "upvote") {
-            return existingVote;
+    const response = await getVoteByRepoIdAndUserId(repoId, userId);
+    if (response) {
+        if (response.data!.vote === "upvote") {
+            return { status: 200, success: true, message: "Vote fetched successfully", data: response.data };
         } else {
             await removeVoteFromRepository(repoId, userId);
         }
     }
-
     const { data, error } = await supabase.clientTable
         .from("votes")
         .insert({
@@ -35,20 +29,15 @@ export const upvoteRepository = async (repoId: string, userId: string): Promise<
         })
         .select("*")
         .single();
-
-    if (error) {
-        console.error("Error upvoting repository:", error);
-        throw new Error("Failed to upvote repository");
-    }
-
-    return data as Vote;
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Vote added successfully", data: data as Vote };
 }
 
-export const downvoteRepository = async (repoId: string, userId: string): Promise<Vote> => {
-    const existingVote = await getVoteByRepoIdAndUserId(repoId, userId);
-    if (existingVote) {
-        if (existingVote.vote === "downvote") {
-            return existingVote;
+export const downvoteRepository = async (repoId: string, userId: string): Response<Vote> => {
+    const response = await getVoteByRepoIdAndUserId(repoId, userId);
+    if (response) {
+        if (response.data!.vote === "downvote") {
+            return { status: 200, success: true, message: "Vote fetched successfully", data: response.data };
         } else {
             await removeVoteFromRepository(repoId, userId);
         }
@@ -63,43 +52,29 @@ export const downvoteRepository = async (repoId: string, userId: string): Promis
         .select("*")
         .single();
 
-    if (error) {
-        console.error("Error downvoting repository:", error);
-        throw new Error("Failed to downvote repository");
-    }
-
-    return data as Vote;
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Vote added successfully", data: data as Vote };
 }
 
-export const removeVoteFromRepository = async (repoId: string, userId: string): Promise<null> => {
+export const removeVoteFromRepository = async (repoId: string, userId: string): Response<null> => {
     const { error } = await supabase.clientTable
         .from("votes")
         .delete()
         .eq("repo_id", repoId)
         .eq("user_id", userId);
 
-    if (error) {
-        console.error("Error removing vote:", error);
-        throw new Error("Failed to remove vote");
-    }
-    return null;
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Vote removed successfully", data: null };
 }
 
-export const getVoteByRepoIdAndUserId = async (repoId: string, userId: string): Promise<Vote | null> => {
+export const getVoteByRepoIdAndUserId = async (repoId: string, userId: string): Response<Vote | null> => {
     const { data, error } = await supabase.clientTable
         .from("votes")
         .select("*")
         .eq("repo_id", repoId)
-        .eq("user_id", userId);
-
-    if (error) {
-        console.error("Error fetching vote:", error);
-        throw new Error("Failed to fetch vote");
-    }
-
-    if (!data) {
-        return null;
-    }
-
-    return data[0] as Vote;
+        .eq("user_id", userId)
+        .maybeSingle();
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    if (!data) return { status: 200, success: true, message: "Vote not found", data: null };
+    return { status: 200, success: true, message: "Vote fetched successfully", data: data as Vote };
 }

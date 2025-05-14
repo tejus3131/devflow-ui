@@ -10,7 +10,6 @@ import {
   Database,
   BookOpen,
   MessageSquareTextIcon,
-  User,
   Menu,
   X,
 } from "lucide-react";
@@ -115,6 +114,7 @@ const Sidebar: React.FC = () => {
                   width={32}
                   height={32}
                   className="h-8 w-8"
+                  priority
                 />
               </div>
               <span

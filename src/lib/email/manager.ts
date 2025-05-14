@@ -3,11 +3,11 @@ import { Resend } from 'resend';
 import { EmailOTPTemplate } from '@/lib/email/OTPTemplate';
 import supabase from '@/lib/db';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is not defined');
+if (!process.env.NEXT_PUBLIC_RESEND_API_KEY) {
+  throw new Error('NEXT_PUBLIC_RESEND_API_KEY is not defined');
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
 
 async function sendOtpEmail({
   email,
@@ -36,7 +36,7 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit numeric OTP
 }
 
-export async function requestOtp(email: string, firstName: string) {
+export async function requestOtp(email: string, firstName: string): Promise<string> {
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
@@ -55,7 +55,7 @@ export async function requestOtp(email: string, firstName: string) {
   return data.id;
 }
 
-export async function resendOtp(oldOTPId: string) {
+export async function resendOtp(oldOTPId: string): Promise<string> {
 
   const { data: oldOtpData, error: oldOtpError } = await supabase.clientTable
     .from('email_otps')

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX, useEffect, useState } from "react";
+import React, { JSX, useState } from "react";
 import Link from "next/link";
 import {
   Folder,
@@ -11,45 +11,47 @@ import {
   ThumbsDown,
   Tag,
   CircleArrowRight,
+  CircleX,
 } from "lucide-react";
 import { Breadcrumb, BreadcrumbProps } from "./Breadcrumb";
 import { Button } from "./Button";
 import Image from "next/image";
 import { ContentType, VoteType } from "@/lib/types";
-import { useUser } from "@/hooks/useUser";
 
 
 export interface ContentCardProps {
-  id: string;
   name: string;
   description: string;
-  location: BreadcrumbProps;
+  breadcrumbs: BreadcrumbProps;
+  breadcrumbsState: "loading" | "error" | "success";
   type: ContentType;
-  author: { user_name: string, avatar_url: string };
+  author: { user_name: string, avatar_url: string } | null;
+  authorState: "loading" | "error" | "success";
   tags: string[];
   upvotes: number;
   downvotes: number;
-  userVote: VoteType;
+  userVoteType: VoteType;
+  onVoteChange: (voteType: VoteType) => void;
 }
 
 export function ContentCard({
-  id,
   name,
   description,
-  location,
+  breadcrumbs,
+  breadcrumbsState,
   type,
   author,
+  authorState,
   tags,
   upvotes,
   downvotes,
-  userVote,
+  userVoteType,
+  onVoteChange
 }: ContentCardProps): JSX.Element {
   const [localUserVoteType, setLocalUserVoteType] =
-    useState<VoteType>(userVote);
+    useState<VoteType>(userVoteType);
   const [localUpvotes, setLocalUpvotes] = useState<number>(upvotes);
   const [localDownvotes, setLocalDownvotes] = useState<number>(downvotes);
-
-  const { user } = useUser();
 
   const typeStyles: Record<
     ContentType,
@@ -59,22 +61,22 @@ export function ContentCard({
       icon: React.ElementType;
     }
   > = {
-    Repository: {
+    repository: {
       bgColor: "bg-blue-100 dark:bg-blue-800/30",
       textColor: "text-blue-800 dark:text-blue-300",
       icon: Folder,
     },
-    Component: {
+    component: {
       bgColor: "bg-green-100 dark:bg-green-800/30",
       textColor: "text-green-800 dark:text-green-300",
       icon: Puzzle,
     },
-    Configuration: {
+    configuration: {
       bgColor: "bg-yellow-100 dark:bg-yellow-800/30",
       textColor: "text-yellow-800 dark:text-yellow-300",
       icon: Settings,
     },
-    Flavour: {
+    flavour: {
       bgColor: "bg-purple-100 dark:bg-purple-800/30",
       textColor: "text-purple-800 dark:text-purple-300",
       icon: Palette,
@@ -84,44 +86,18 @@ export function ContentCard({
   const currentTypeStyle = typeStyles[type];
   const TypeIcon = currentTypeStyle.icon;
 
-  const setVoteInDB = async (voteType: VoteType) => {
-    if (!user) return;
-    fetch(`/api/repositories/${id}/votes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_id: user.id,
-        vote_type: voteType,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          console.log("Vote updated successfully");
-        } else {
-          console.error("Error updating vote:", data.message);
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating vote:", error);
-      }
-      );
-  }
-
   const handleUpvote = () => {
     if (localUserVoteType === "upvote") {
       setLocalUpvotes(localUpvotes - 1);
       setLocalUserVoteType(null);
-      setVoteInDB(null);
+      onVoteChange(null);
     } else {
       setLocalUpvotes(localUpvotes + 1);
       if (localUserVoteType === "downvote") {
         setLocalDownvotes(localDownvotes - 1);
       }
       setLocalUserVoteType("upvote");
-      setVoteInDB("upvote");
+      onVoteChange("upvote");
     }
   };
 
@@ -129,18 +105,16 @@ export function ContentCard({
     if (localUserVoteType === "downvote") {
       setLocalDownvotes(localDownvotes - 1);
       setLocalUserVoteType(null);
-      setVoteInDB(null);
+      onVoteChange(null);
     } else {
       setLocalDownvotes(localDownvotes + 1);
       if (localUserVoteType === "upvote") {
         setLocalUpvotes(localUpvotes - 1);
       }
       setLocalUserVoteType("downvote");
-      setVoteInDB("downvote");
+      onVoteChange("downvote");
     }
   };
-
-
 
   return (
     <div className={`rounded-lg shadow-sm overflow-hidden`}>
@@ -185,18 +159,45 @@ export function ContentCard({
           {description}
         </p>
 
-        <Link className="flex items-center gap-2 mb-4" href={`/${author.user_name}/profile`}>
+        {authorState === "success" && <Link className="flex items-center gap-2 mb-4" href={`/${author!.user_name}`}>
           <Image
-            alt={author.user_name}
-            src={author.avatar_url}
+            alt={author!.user_name}
+            src={author!.avatar_url}
             className="w-8 h-8 rounded-full"
             width={32}
             height={32}
           />
           <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
-            @{author.user_name}
+            @{author!.user_name}
           </span>
-        </Link>
+        </Link>}
+
+        {authorState === "loading" && (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full"></div>
+            <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
+              Loading...
+            </span>
+          </div>
+        )}
+
+        {authorState === "error" && (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-red-200 rounded-full">
+              <CircleX
+                className="w-6 h-6 text-red-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                size={24}
+                strokeWidth={2}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </div>
+            <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
+              Error loading author
+            </span>
+          </div>
+        )}
 
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
@@ -216,16 +217,24 @@ export function ContentCard({
       <div className="border-border-light dark:border-border-dark bg-neutral-light dark:bg-neutral-dark p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
           <div className="text-xs sm:text-sm text-on-neutral-light dark:text-on-neutral-dark w-full sm:w-auto overflow-x-auto">
-            <Breadcrumb items={location.items} />
+            {breadcrumbsState === "loading" ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-200 animate-pulse rounded-full" />
+                <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
+                  Loading breadcrumbs...
+                </span>
+              </div>
+            ) : (<Breadcrumb items={breadcrumbs.items} />)}
+
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Link href={`/${location.items[0].href}`} className="w-full sm:w-auto">
+            <Link href={breadcrumbsState === "loading" ? "#" : `${breadcrumbs.items[breadcrumbs.items.length - 1].href}`} className="w-full sm:w-auto">
               <Button
                 variant="primary"
                 className="py-1.5 sm:py-2 px-3 sm:px-5 w-full sm:w-auto text-sm"
                 icon={<CircleArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />}
               >
-                Discover
+                {breadcrumbsState === "loading" ? "Loading..." : `Go to ${breadcrumbs.items[breadcrumbs.items.length - 1].label}`}
               </Button>
             </Link>
           </div>

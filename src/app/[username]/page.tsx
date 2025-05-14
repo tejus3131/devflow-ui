@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, FC } from "react";
+import React, { useState, useEffect, FC, use } from "react";
 import Image from "next/image";
 import {
   Edit2,
@@ -9,7 +9,6 @@ import {
   Lock,
   Link,
   LogOut,
-  MessageSquare,
   BarChart,
 } from "lucide-react";
 import { UserDetail } from "@/lib/types";
@@ -20,6 +19,7 @@ import { useRouter } from "next/navigation";
 import BadgeTray from "@/components/Badge";
 import { ConnectionButton, ConnectionCard, ConnectionManager } from "./connections";
 import StatsCard from "@/components/StatsCard";
+import { getUserByUsername } from "@/lib/data/users";
 
 
 const favorites = ["post1", "post2", "post3"];
@@ -31,55 +31,45 @@ interface ProfilePageProps {
 
 const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
   const [user, setUser] = useState<UserDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [userState, setUserState] = useState<"loading" | "error" | "success">("loading");
+  const [userError, setUserError] = useState<string | null>(null);
 
-  const { user: selfUser, loading: selfLoading, signOut } = useUser();
+  const { user: selfUser, isLoading: selfLoading, isAuthenticated: selfAuthenticated, signOut } = useUser();
   const [isSelf, setIsSelf] = useState(false);
 
   const { openModal } = useModal();
   const router = useRouter();
 
-
   useEffect(() => {
     const fetchUserData = async () => {
       const { username } = await params;
-
+      const decodedUsername = decodeURIComponent(username);
       try {
-        setLoading(true);
-        setError(null);
-
-        if (!selfLoading) {
-          if (selfUser?.user_name === username) {
-            setUser(selfUser);
-            setIsSelf(true);
-          } else {
-            // Replace with actual API call
-            const res = await fetch('/api/users', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ user_name: username }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-              throw new Error(data.message || 'Failed to fetch user');
-            }
-
-            setUser(data.data);
-            setIsSelf(false); // Explicitly set to false for other users
-          }
+        setUserState("loading");
+        setUserError(null);
+        if (selfLoading) return;
+        if (selfAuthenticated && selfUser!.user_name === decodedUsername) {
+          setUser(selfUser);
+          setIsSelf(true);
+          setUserState("success");
+          return;
         }
-      } catch (err) {
-        setError("Failed to load user data");
-      } finally {
-        setLoading(false);
+        const response = await getUserByUsername(decodedUsername);
+        console.log("User data response:", response);
+        if (!response.success) {
+          setUserState("error");
+          setUserError(response.message);
+          return;
+        }
+        setUser(response.data);
+        setUserState("success");
+        setUserError(null);
+      } catch (err: any) {
+        console.error("Error fetching user data:", err);
+        setUserState("error");
+        setUserError(err.message || "Failed to fetch user data");
       }
     };
-
     fetchUserData();
   }, [params, selfUser, selfLoading]);
 
@@ -89,22 +79,16 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
       setIsSelf(false);
     } catch (error) {
       console.error("Error signing out:", error);
-      setError("Failed to sign out");
     }
   };
 
   const handleUsernameChange = (newUserName: string) => {
-    // Update user state
     setUser((prev) => (prev ? { ...prev, user_name: newUserName } : prev));
-
-    // Navigate to new profile URL
-    router.push(`/${newUserName}/profile`);
-
-    // Set isSelf to true since this is the current user
+    router.push(`/${newUserName}`);
     setIsSelf(true);
   };
 
-  if (loading) {
+  if (userState === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -112,27 +96,19 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
     );
   }
 
-  if (error) {
+  if (userState === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg font-medium text-error">{error}</p>
+        <p className="text-lg font-medium text-error">{userError}</p>
       </div>
     );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
   }
 
   return (<>
     {user && (
       <>
         <FullNameForm initialValue={user.full_name!} userId={user.id!} setNewFullName={(newFullName) => setUser((prev) => (prev ? { ...prev, full_name: newFullName } : prev))} />
-        <EmailForm initialValue={user.email!} userId={user.id!} setNewEmail={(newEmail) => setUser((prev) => (prev ? { ...prev, email: newEmail } : prev))} fullName={user.full_name!} />
+        {isSelf && <EmailForm initialValue={user.email!} userId={user.id!} setNewEmail={(newEmail) => setUser((prev) => (prev ? { ...prev, email: newEmail } : prev))} fullName={user.full_name!} />}
         <UserNameForm initialValue={user.user_name!} userId={user.id!} setNewUserName={handleUsernameChange} />
         <AvatarForm initialUrl={user.avatar_url} userId={user.id!} onAvatarUpdate={(newAvatar) => setUser((prev) => (prev ? { ...prev, avatar_url: newAvatar } : prev))} />
         <BioForm initialValue={user.bio!} userId={user.id!} setNewBio={(newBio) => setUser((prev) => (prev ? { ...prev, bio: newBio } : prev))} />
@@ -218,25 +194,27 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                     </div>
 
                     {/* Email */}
-                    <div className="relative mt-2">
-                      <div className="group flex items-center" onClick={() => {
-                        if (isSelf) {
-                          openModal("email_edit");
-                        }
-                      }}>
-                        <span className=" py-1 bg-neutral-light dark:bg-neutral-dark rounded-full text-on-neutral-light dark:text-on-neutral-dark text-sm font-medium">
-                          {user?.email || "No email provided"}
-                        </span>
-                        {isSelf && (
-                          <div
-                            className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
-                            aria-label="Edit email"
-                          >
-                            <Edit2 size={14} />
-                          </div>
-                        )}
+                    {isSelf && (
+                      <div className="relative mt-2">
+                        <div className="group flex items-center" onClick={() => {
+                          if (isSelf) {
+                            openModal("email_edit");
+                          }
+                        }}>
+                          <span className=" py-1 bg-neutral-light dark:bg-neutral-dark rounded-full text-on-neutral-light dark:text-on-neutral-dark text-sm font-medium">
+                            {user?.email || "No email provided"}
+                          </span>
+                          {isSelf && (
+                            <div
+                              className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
+                              aria-label="Edit email"
+                            >
+                              <Edit2 size={14} />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Username - aligned with other text */}
                     <div className="relative mt-2">
@@ -246,7 +224,7 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                         }
                       }} >
                         <span className=" py-1 bg-neutral-light dark:bg-neutral-dark rounded-full text-on-neutral-light dark:text-on-neutral-dark text-sm font-medium">
-                          @{user?.user_name || "username"}
+                          {user?.user_name || "username"}
                         </span>
                         {isSelf && (
                           <div
@@ -266,8 +244,8 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                 </div>
 
                 <div className="flex flex-col">
-                  {selfUser && (<ConnectionButton user_id={selfUser!.id} profile_user_id={user.id} />)}
-                  <div className="mt-2 w-[150px] sm:w-[180px] mt-4"><BadgeTray user_id={user.id} /></div>
+                  {selfUser && (<ConnectionButton user_id={selfUser!.id} profile_user_id={user!.id} />)}
+                  <div className="mt-2 w-[150px] sm:w-[180px] mt-4"><BadgeTray user_id={user!.id} /></div>
                 </div>
               </div>
 
@@ -275,11 +253,13 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                  <ConnectionCard user_id={user.id} />
+                  <ConnectionCard user_id={user!.id} />
                   <StatsCard
                     title="Thoughts"
                     value={4}
                     icon={<BarChart size={20} />}
+                    state="success"
+                    error={null}
                   />
                 </div>
               </div>

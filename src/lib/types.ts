@@ -7,12 +7,14 @@ export interface UserDetail {
   bio: string;
 }
 
-export interface ApiResponse<T> {
+interface ResponseData<T> {
   status: number;
   success: boolean;
   message: string;
   data: T | null;
 }
+
+export type Response<T> = Promise<ResponseData<T>>;
 
 export type ConnectionStatus = 'pending' | 'accepted' | 'declined' | 'blocked';
 
@@ -53,9 +55,7 @@ export interface RepositoryDetail {
 }
 
 export type VoteType = 'upvote' | 'downvote' | null;
-export type ContentType = "Repository" | "Component" | "Configuration" | "Flavour";
-
-
+export type ContentType = "repository" | "component" | "configuration" | "flavour";
 export interface Vote {
   id: string;
   user_id: string;

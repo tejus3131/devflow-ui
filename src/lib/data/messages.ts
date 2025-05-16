@@ -50,7 +50,9 @@ export async function loadChats(connectionId: string, page: number, pageSize: nu
         };
     }
 
-    const attachmentsPromises = data.map(async (message) => {
+    const reversedData = data.reverse();
+
+    const attachmentsPromises = reversedData.map(async (message) => {
         const attachments: Attachment[] = [];
         const attachmentPromises = message.attachments.map(async (attachmentId: string) => {
             const attachmentResponse = await getAttachmentById(attachmentId);

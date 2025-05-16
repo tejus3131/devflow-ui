@@ -2,20 +2,20 @@
 
 import React, { JSX, useEffect, useState } from "react";
 
-import { RepositoryDetail, Vote, VoteType } from "@/lib/types";
+import { BlogDetail, Vote, VoteType } from "@/lib/types";
 import { useUser } from "@/hooks/useUser";
-import { downvoteRepository, getVoteByRepoIdAndUserId, getVotesByRepoId, removeVoteFromRepository, upvoteRepository } from "@/lib/data/votes";
+import { downvoteBlog, getVoteByBlogTitleAndUserId, getVotesByBlogTitle, removeVoteFromBlog, upvoteBlog } from "@/lib/data/votes";
 import { ContentCard } from "@/components/ContentCard";
 import { getUserById } from "@/lib/data/users";
 
 
-export interface RepositoryCardProps {
-    repository: RepositoryDetail
+export interface BlogCardProps {
+    blog: BlogDetail
 }
 
-export function RepositoryCard({
-    repository
-}: RepositoryCardProps): JSX.Element {
+export function BlogCard({
+    blog
+}: BlogCardProps): JSX.Element {
 
     const { user } = useUser();
 
@@ -32,17 +32,17 @@ export function RepositoryCard({
     const onVoteChange = async (voteType: VoteType) => {
         if (!user) return;
         if (voteType === "upvote") {
-            await upvoteRepository(repository.id, user.id);
+            await upvoteBlog(blog.title, user.id);
         } else if (voteType === "downvote") {
-            await downvoteRepository(repository.id, user.id);
+            await downvoteBlog(blog.title, user.id);
         } else if (voteType === null) {
-            await removeVoteFromRepository(repository.id, user.id);
+            await removeVoteFromBlog(blog.title, user.id);
         }
     };
 
     useEffect(() => {
         const fetchVotes = async () => {
-            const response = await getVotesByRepoId(repository.id);
+            const response = await getVotesByBlogTitle(blog.title);
             if (!response.success) {
                 console.error("Error fetching vote:", response.message);
                 return;
@@ -54,12 +54,12 @@ export function RepositoryCard({
             setLocalDownvotes(downvotes);
         }
         fetchVotes();
-    }, [user, repository.id]);
+    }, [user, blog.title]);
 
     useEffect(() => {
         const fetchUserVote = async () => {
             if (!user) return;
-            const response = await getVoteByRepoIdAndUserId(repository.id, user.id);
+            const response = await getVoteByBlogTitleAndUserId(blog.title, user.id);
             if (!response.success) {
                 console.error("Error fetching vote:", response.message);
                 return;
@@ -67,11 +67,11 @@ export function RepositoryCard({
             setLocalUserVoteType(response.data?.vote || null);
         }
         fetchUserVote();
-    }, [user, repository.id]);
+    }, [user, blog.title]);
 
     useEffect(() => {
         const fetchAuthor = async () => {
-            const userRes = await getUserById(repository.author_id);
+            const userRes = await getUserById(blog.author_id);
             if (!userRes.success) {
                 console.error("Error fetching author:", userRes.message);
                 setAuthorState("error");
@@ -81,7 +81,7 @@ export function RepositoryCard({
             setAuthorState("success");
         }
         fetchAuthor();
-    }, [repository.id]);
+    }, [blog.title]);
 
     useEffect(() => {
         if (authorState !== "success") {
@@ -91,24 +91,24 @@ export function RepositoryCard({
         const fetchBreadcrumbs = async () => {
             const locationItems = [
                 { label: author?.user_name!, href: `/${author?.user_name}` },
-                { label: repository.name, href: `/${author?.user_name}/${repository.name}` }
+                { label: blog.title, href: `/blogs/${blog.title}` }
             ];
             setBreadcrumbs({ items: locationItems });
             setBreadcrumbsState("success");
         }
         fetchBreadcrumbs();
-    }, [repository.id, author, authorState]);
+    }, [blog.title, author, authorState]);
 
     return (
         <ContentCard
-            name={repository.name}
-            description={repository.description}
+            name={blog.title}
+            description={blog.description}
             breadcrumbs={breadcrumbs}
             breadcrumbsState={breadcrumbsState}
-            type="repository"
+            type="blog"
             author={author}
             authorState={authorState}
-            tags={repository.tags}
+            tags={blog.tags}
             upvotes={localUpvotes}
             downvotes={localDownvotes}
             userVoteType={localUserVoteType}

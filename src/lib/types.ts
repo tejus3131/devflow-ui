@@ -61,6 +61,7 @@ export interface Vote {
   id: string;
   user_id: string;
   repo_id?: string;
+  blog_id?: string;
   vote: VoteType;
 }
 
@@ -87,4 +88,15 @@ export interface Message {
 export interface MessageGroupType {
   date: string;
   messages: Message[];
+}
+
+export interface BlogDetail {
+  title: string;
+  description: string;
+  tags: string[]
+  cover_url: string;
+  content: string;
+  author_id: string;
+  created_at: string;
+  updated_at: string;
 }

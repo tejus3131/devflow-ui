@@ -9,7 +9,7 @@ import {
   FileText,
   Database,
   BookOpen,
-  MessageSquareTextIcon
+  MessageSquareTextIcon,
   Menu,
   X,
 } from "lucide-react";
@@ -54,7 +54,7 @@ const Sidebar: React.FC = () => {
       label: "Repositories",
       icon: <Database className="w-5 h-5" />,
     },
-    { href: `/${user?.user_name}/blogs`, label: "Blogs", icon: <BookOpen className="w-5 h-5" /> },
+    { href: `/blogs`, label: "Blogs", icon: <BookOpen className="w-5 h-5" /> },
     { href: "/docs", label: "Docs", icon: <FileText className="w-5 h-5" /> },
   ];
 

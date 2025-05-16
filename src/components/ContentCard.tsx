@@ -88,7 +88,7 @@ export function ContentCard({
       textColor: "text-purple-800 dark:text-purple-300",
       icon: Palette,
     },
-    Blog:{
+    blog:{
       bgColor: "bg-red-100 dark:bg-red-800/30",
       textColor: "text-red-800 dark:text-red-300",
       icon: Palette,

@@ -29,6 +29,12 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Logo
+
+![DevFlow UI Logo](https://cjmsqadtqcqiydqawvvs.supabase.co/storage/v1/object/public/blog-image/ChatGPT%20Image%20Mar%2030,%202025,%2012_47_31%20PM.png)
+
+The project logo is stored in the public folder and served directly from the root path.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

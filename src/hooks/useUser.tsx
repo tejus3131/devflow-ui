@@ -31,3 +31,4 @@ export function useAuthRequired(requireAuth: boolean = true, redirectTo: string 
   if (requireAuth && !isAuthenticated) return false;
   return true;
 }
+

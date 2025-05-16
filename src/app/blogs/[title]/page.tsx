@@ -10,109 +10,9 @@ import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  coverImage: string;
-  content: string;
-  tags: string[];
-  readTime: string;
-  publishedDate: string;
-}
-
-// Dummy blog data for testing
-const dummyBlogData: BlogPost = {
-  id: "1",
-  title: "Understanding Modern Web Development with React and TypeScript",
-  coverImage: "https://images.unsplash.com/photo-1746730251085-34132b6dcec5?q=80&w=2072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Replace with your actual image path
-  content: `
-# Tejus Gupta
-## Software Developer
-
-### Contact
-- 📞 [+91 63929 13763](tel:+916392913763)
-- 📧 tejus3131@gmail.com
-- 🔗 [LinkedIn](https://www.linkedin.com/in/tejus3131)
-- 🔗 [GitHub](https://github.com/tejus3131)
-- 🔗 [Twitter](https://twitter.com/tejus3131)
-
----
-
-### Profile
-Passionate Computer Science student with a strong foundation in software development. Skilled in Python and full-stack web development, with experience in building projects from scratch and leading technical workshops. Eager to innovate; I aim to leverage my knowledge to solve real-world problems and create impactful tech solutions.
-
----
-
-### Work Experience
-
-#### KloudiDev Digital Solutions
-*Software Developer Intern*  
-FEB 2025 - PRESENT  
-- Collaborated with team members to design, develop, and launch a user-friendly AI software product.
-- Created Automated CI/CD for deployment of the application on AWS and added tests for validation before deployment.
-- Demonstrated adaptability by swiftly learning and applying new technologies, tools, and methodologies.
-
-*Python Developer Intern*  
-FEB 2024 - AUGUST 2024  
-- Managed FastAPI-based server for multiple microservices deployed on GCP with Docker.
-- Worked on multiple Proof of Concepts (POCs) with Streamlit and LangChain.
-
----
-
-### Skills
-- Python, JavaScript, Rust, C++
-- Flask, FastAPI
-- LangChain
-- Streamlit
-- ReactJS, Next.js
-- Tailwind, Bootstrap
-- Supabase, MongoDB, MySQL
-- GCP, AWS
-- Git, GitHub
-- CI/CD - GitHub Action
-
----
-
-### Projects
-- *[Kairos (Gen AI)](https://github.com/tejus3131/kairos)*  
-  Built a Gen AI-based Mental Therapist that can help users by providing a safe space to talk and also assess their mental situation based on the talk.  
-  Technologies: Python, Flask, Jinja, MongoDB
-
-- *[Quellify (Full Stack)](https://github.com/tejus3131/quellify)*  
-  Built a complete course-providing website where users can share their courses and also see others' courses.  
-  Technologies: Python, Flask, Jinja, MongoDB
-
-- *[Interpreter for Toy Language (Rust)](https://github.com/tejus3131/bhasha)*  
-  Developed an interpreter for a toy language, focusing on parsing and language construction.  
-  Technologies: Rust, Compiler Design
-
----
-
-### Accomplishments
-- Speaker at NextFest, MIET, Meerut.
-- Winner, AWS Ideathon, 2024.
-- First runner-up, Fetchathon.
-- Second runner-up, Fetchathon 2.0.
-- Speaker at Tech Fest Xcepto, IIT Mandi.
-
----
-
-### Strengths
-- Strong problem-solving skills
-- Effective communication
-- Adaptable and quick learner
-
----
-
-### Education
-*Bachelor of Technology*  
-Meerut Institute of Engineering and Technology
-  `,
-  tags: ["React", "TypeScript", "WebDev", "Frontend", "JavaScript"],
-  readTime: "5 min read",
-  publishedDate: "May 10, 2025"
-};
+import { BlogDetail } from '@/lib/types';
+import { getBlogByTitle } from '@/lib/data/blogs';
+import { useUser } from '@/hooks/useUser';
 
 // Custom components for MDX
 const components = {
@@ -150,34 +50,55 @@ const components = {
   td: (props: any) => <td className="border border-gray-300 dark:border-gray-700 px-4 py-2" {...props} />,
   hr: () => <hr className="my-8 border-t border-gray-300 dark:border-gray-700" />,
   img: (props: any) => (
-    <div className="my-6">
-      <img className="max-w-full h-auto rounded-lg" {...props} alt={props.alt || ''} />
-    </div>
+    <Image
+      className="rounded-lg mx-auto"
+      {...props}
+      alt={props.alt || ''}
+      width={0}
+      height={0}
+      sizes="(max-width: 768px) 100vw, 800px"
+      style={{
+        width: '100%',
+        height: 'auto',
+        maxWidth: '100%'
+      }}
+    />
   ),
   a: (props: any) => <a className="text-blue-600 dark:text-blue-400 hover:underline" {...props} />,
   em: (props: any) => <em className="italic" {...props} />,
   strong: (props: any) => <strong className="font-bold" {...props} />,
 };
 
-const BlogPostPage: React.FC = () => {
-  const params = useParams();
-  const id = params.id as string;
-  const [blog, setBlog] = useState<BlogPost | null>(null);
+interface BlogPostPageProps {
+  params: { title: string };
+}
+
+const BlogPostPage: React.FC<BlogPostPageProps> = ({ params }) => {
+  const [blog, setBlog] = useState<BlogDetail | null>(null);
   const [mdxSource, setMdxSource] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // For testing with dummy data
-    const loadDummyData = async () => {
+    const fetchBlogDetails = async () => {
+      const { title } = await params;
+      console.log('Fetching blog with title:', title);
+      const response = await getBlogByTitle(title);
+      console.log('Response:', response);
+      if (!response.success) {
+        setError(response.message);
+        return;
+      }
+      setBlog(response.data);
+    }
+    fetchBlogDetails();
+  }, [params]);
+
+  useEffect(() => {
+    const loadMDX = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-        // Set dummy blog data
-        setBlog(dummyBlogData);
-        
-        // Process MDX content from dummy data with enhanced plugins
-        const mdxSource = await serialize(dummyBlogData.content, {
+        if (!blog) return;
+        const mdxSource = await serialize(blog.content, {
           mdxOptions: {
             remarkPlugins: [remarkGfm],
             rehypePlugins: [
@@ -186,7 +107,6 @@ const BlogPostPage: React.FC = () => {
               rehypeHighlight
             ],
           },
-          // Adding this to prevent potential JS expression parsing issues
           parseFrontmatter: false,
         });
         setMdxSource(mdxSource);
@@ -198,49 +118,8 @@ const BlogPostPage: React.FC = () => {
       }
     };
 
-    // Use this for testing with dummy data
-    loadDummyData();
-    
-    // For real API usage (uncomment when ready)
-    // const fetchBlog = async () => {
-    //   if (!id) return;
-    //   
-    //   try {
-    //     setIsLoading(true);
-    //     setError(null);
-    //     // Replace with your actual API endpoint
-    //     const response = await fetch(`/api/blogs/${id}`);
-    //     
-    //     if (!response.ok) {
-    //       throw new Error('Failed to fetch blog post');
-    //     }
-    //     
-    //     const data = await response.json();
-    //     setBlog(data);
-    //     
-    //     // Process MDX content with enhanced plugins
-    //     const mdxSource = await serialize(data.content, {
-    //       mdxOptions: {
-    //         remarkPlugins: [remarkGfm],
-    //         rehypePlugins: [
-    //           rehypeSlug,
-    //           [rehypeAutolinkHeadings, { behavior: 'wrap' }],
-    //           rehypeHighlight
-    //         ],
-    //       },
-    //       // Adding this to prevent potential JS expression parsing issues
-    //       parseFrontmatter: false,
-    //     });
-    //     setMdxSource(mdxSource);
-    //   } catch (error) {
-    //     console.error('Error fetching blog post:', error);
-    //     setError('Failed to load blog post. Please try again later.');
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchBlog();
-  }, [id]);
+    loadMDX();
+  }, [blog]);
 
   if (isLoading) {
     return (
@@ -274,38 +153,41 @@ const BlogPostPage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-5xl rounded-t-md">
         <div className="bg-surface dark:bg-neutral-dark rounded-lg shadow-md overflow-hidden">
           {/* Cover image inside container */}
-          <div className="relative w-full h-80">
-            <Image 
-              src={blog.coverImage} 
+            <div className="relative w-full overflow-hidden">
+            <div className="relative">
+              <Image
+              src={blog.cover_url}
               alt={blog.title}
-              layout="fill"
-              objectFit="cover"
-              className="opacity-90"
+              width={1200}
+              height={0}
+              className="w-full h-auto"
               priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
-          </div>
+              sizes="(max-width: 768px) 100vw, 1200px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+            </div>
+            </div>
 
           {/* Blog header */}
           <div className="p-6 md:p-8 bg-background-light dark:bg-muted-dark">
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-on-surface dark:text-on-surface-dark">{blog.title}</h1>
-            
+
             <div className="flex flex-wrap items-center gap-4 text-on-surface dark:text-on-surface-dark text-sm mb-6">
               <div className="flex items-center">
                 <Calendar size={16} className="mr-1" />
-                <span>{blog.publishedDate}</span>
+                <span>{blog.updated_at}</span>
               </div>
               <div className="flex items-center">
                 <Clock size={16} className="mr-1" />
-                <span>{blog.readTime}</span>
+                <span>15</span>
               </div>
             </div>
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2 mb-6">
               {blog.tags.map((tag, index) => (
-                <span 
-                  key={index} 
+                <span
+                  key={index}
                   className="bg-accent dark:bg-accent-dark text-on-accent dark:text-on-accent-dark px-3 py-1 rounded-full text-xs font-medium"
                 >
                   #{tag}
@@ -324,22 +206,22 @@ const BlogPostPage: React.FC = () => {
           {/* Comments section */}
           <div className="p-6 md:p-8 bg-white dark:bg-muted-dark text-on-surface dark:text-on-muted-dark border-t border-gray-200 dark:border-gray-800">
             <h3 className="text-xl font-semibold mb-6">Thoughts</h3>
-            
+
             {/* Add comment form */}
             <div className="mb-8">
-              <textarea 
-                placeholder="Share your thoughts..." 
+              <textarea
+                placeholder="Share your thoughts..."
                 className="w-full p-4 border border-gray-300 dark:border-gray-700 rounded-lg bg-background dark:bg-black text-foreground dark:text-white resize-none min-h-[120px] focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark"
               />
               <div className="flex justify-end mt-3">
-                <button 
+                <button
                   className="bg-accent dark:bg-accent-dark text-on-accent dark:text-on-accent-dark px-4 py-2 rounded-md font-medium hover:bg-accent/90 dark:hover:bg-accent-dark/90 transition-colors"
                 >
                   Post Comment
                 </button>
               </div>
             </div>
-            
+
             {/* Comments list */}
             <div className="space-y-6">
               {/* Example comments - replace with actual comments data */}
@@ -357,7 +239,7 @@ const BlogPostPage: React.FC = () => {
                   <p>Thanks for sharing these Git workflow tips! I&apos;ve been looking for a clear guide like this for my team.</p>
                 </div>
               </div>
-              
+
               <div className="border-b border-gray-200 dark:border-gray-800 pb-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400">

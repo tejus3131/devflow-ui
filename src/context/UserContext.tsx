@@ -1,122 +1,171 @@
 "use client";
-import { createContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useState, useEffect, ReactNode, useCallback } from "react";
 import supabase from "@/lib/db";
 import { UserDetail } from "@/lib/types";
-import { getUserById } from "@/lib/data/users"
+import { getUserById } from "@/lib/data/users";
+import { AuthError, isAuthSessionMissingError, User } from "@supabase/supabase-js";
 
-// Define the context value type
+export type AuthState =
+  | "initializing"
+  | "checking_session"
+  | "fetching_profile"
+  | "logged_in"
+  | "logged_out"
+  | "profile_error"
+  | "oauth_pending";
+
 export interface UserContextValue {
   user: UserDetail | null;
-  loading: boolean;
+  state: AuthState;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  error: Error | AuthError | null;
   signInWithGithub: (redirectUrl: string) => Promise<void>;
   signOut: () => Promise<void>;
   reloadUser: () => Promise<void>;
 }
 
-// Create the context with a default value of `null`
-export const UserContext = createContext<UserContextValue | null>(null);
+const defaultContextValue: UserContextValue = {
+  user: null,
+  state: "initializing",
+  isLoading: true,
+  isAuthenticated: false,
+  error: null,
+  signInWithGithub: async () => {
+    throw new Error("UserContext not initialized")
+  },
+  signOut: async () => {
+    throw new Error("UserContext not initialized")
+  },
+  reloadUser: async () => {
+    throw new Error("UserContext not initialized")
+  }
+};
 
-// Define the props for the UserProvider
+export const UserContext = createContext<UserContextValue>(defaultContextValue);
+
 interface UserProviderProps {
   children: ReactNode;
+  onAuthStateChange?: (state: AuthState) => void;
 }
 
-// Provider component
-export function UserProvider({ children }: UserProviderProps) {
+const isLoadingState = (state: AuthState): boolean => {
+  return ["initializing", "checking_session", "fetching_profile", "oauth_pending"].includes(state);
+};
+
+const isAuthenticatedState = (state: AuthState): boolean => {
+  return state === "logged_in";
+};
+
+export function UserProvider({
+  children,
+  onAuthStateChange
+}: UserProviderProps) {
   const [user, setUser] = useState<UserDetail | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [state, setState] = useState<AuthState>("initializing");
+  const [error, setError] = useState<Error | AuthError | null>(null);
 
-  // Check for user on mount and when hash changes (for OAuth redirects)
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data, error } = await supabase.clientAuth.getUser();
-        if (error) {
-          setUser(null);
-        } else if (data?.user) {
-          const { id } = data.user;
-          const user = await getUserById(id);
-          setUser(user);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const isLoading = isLoadingState(state);
+  const isAuthenticated = isAuthenticatedState(state);
 
-    // Also subscribe to auth state changes
-    const { data: authListener } = supabase.clientAuth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          const { id } = session.user;
-          setUser(await getUserById(id));
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-        }
-      },
-    );
+  const updateState = useCallback((newState: AuthState) => {
+    setState(newState);
+    onAuthStateChange?.(newState);
+  }, [onAuthStateChange]);
 
-    checkUser();
-    window.addEventListener("hashchange", checkUser);
-
-    // Clean up
-    return () => {
-      window.removeEventListener("hashchange", checkUser);
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
-    };
-  }, []);
-
-  // Auth functions
-  const signInWithGithub = async (redirectUrl: string) => {
-    await supabase.clientAuth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
-  };
-
-  const signOut = async () => {
-    await supabase.clientAuth.signOut();
-    setUser(null);
-  };
-
-  const reloadUser = async () => {
-    setLoading(true);
+  const fetchUserProfile = useCallback(async (authUser: User) => {
+    updateState("fetching_profile");
     try {
-      const { data, error } = await supabase.clientAuth.getUser();
-      if (error) {
-        console.error("Error fetching user:", error);
+      const response = await getUserById(authUser.id);
+      if (!response.success) {
+        console.error("Error fetching user profile:", response.message);
+        setError(new Error(response.message || "Failed to fetch user profile"));
+        updateState("profile_error");
         setUser(null);
-      } else if (data?.user) {
-        const { id } = data.user;
-        setUser(await getUserById(id));
       } else {
-        setUser(null);
+        setUser(response.data);
+        updateState("logged_in");
       }
     } catch (error) {
-      console.error("Unexpected error:", error);
+      console.error("Unexpected error during profile fetch:", error);
+      setError(error instanceof Error ? error : new Error("Unknown error during profile fetch"));
+      updateState("profile_error");
       setUser(null);
-    } finally {
-      setLoading(false);
+    }
+  }, [updateState]);
+
+  const loadUser = useCallback(async () => {
+    setError(null);
+    updateState("checking_session");
+
+    try {
+      const { data, error: sessionError } = await supabase.clientAuth.getUser();
+
+      if (sessionError) {
+        if (isAuthSessionMissingError(sessionError)) {
+          setUser(null);
+          updateState("logged_out");
+          return;
+        } else {
+          console.error("Authentication error:", sessionError);
+          setError(sessionError);
+          updateState("profile_error");
+          return;
+        }
+      }
+      await fetchUserProfile(data.user);
+    } catch (unexpectedError) {
+      console.error("Unexpected error during authentication:", unexpectedError);
+      setError(unexpectedError instanceof Error ? unexpectedError : new Error("Unknown authentication error"));
+      updateState("profile_error");
+      setUser(null);
+    }
+  }, [updateState, fetchUserProfile]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  const signInWithGithub = async (redirectUrl: string) => {
+    updateState("oauth_pending");
+    try {
+      await supabase.clientAuth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+    } catch (error) {
+      console.error("GitHub sign-in error:", error);
+      setError(error instanceof Error ? error : new Error("Failed to initiate GitHub sign-in"));
+      updateState("profile_error");
     }
   };
 
+  const signOut = async () => {
+    try {
+      await supabase.clientAuth.signOut();
+      setUser(null);
+      updateState("logged_out");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setError(error instanceof Error ? error : new Error("Failed to sign out"));
+    }
+  };
+
+  const contextValue: UserContextValue = {
+    user,
+    state,
+    isLoading,
+    isAuthenticated,
+    error,
+    signInWithGithub,
+    signOut,
+    reloadUser: loadUser,
+  };
+
   return (
-    <UserContext.Provider
-      value={{
-        user,
-        loading,
-        signInWithGithub,
-        signOut,
-        reloadUser,
-      }}
-    >
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );

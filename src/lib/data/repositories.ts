@@ -1,12 +1,12 @@
 import supabase from "@/lib/db";
-import { RepositoryDetail } from "@/lib/types";
+import { RepositoryDetail, Response } from "@/lib/types";
 
 export const createRepository = async (
     name: string,
     description: string,
     tags: string[],
     userId: string,
-): Promise<RepositoryDetail> => {
+): Response<RepositoryDetail> => {
     const { data, error } = await supabase.clientTable
         .from("repositories")
         .insert({
@@ -17,56 +17,52 @@ export const createRepository = async (
         })
         .select("*")
         .single();
-
-    if (error) {
-        console.error("Error creating repository:", error);
-        throw new Error("Failed to create repository");
-    }
+    if (error) return { status: 400, success: false, message: error.message, data: null };
 
     return {
-        id: data.id,
-        name,
-        description,
-        type: "Repository",
-        author_id: userId,
-        tags,
+        status: 200,
+        success: true,
+        message: "Repository created successfully",
+        data: {
+            id: data.id,
+            name,
+            description,
+            type: "Repository",
+            author_id: userId,
+            tags,
+        }
     }
 }
 
-export const getRepositoryById = async (id: string): Promise<RepositoryDetail> => {
+export const getRepositoryById = async (id: string): Response<RepositoryDetail> => {
     const { data, error } = await supabase.clientTable
         .from("repositories")
         .select("*")
         .eq("id", id)
         .single();
-
-    if (error) {
-        console.error("Error fetching repository:", error);
-        throw new Error("Failed to fetch repository");
-    }
-
+    if (error) return { status: 400, success: false, message: error.message, data: null };
     return {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        type: "Repository",
-        author_id: data.author_id,
-        tags: data.tags
+        status: 200,
+        success: true,
+        message: "Repository fetched successfully",
+        data: {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            type: "Repository",
+            author_id: data.author_id,
+            tags: data.tags
+        }
     }
 }
 
 
-export const getRepositoriesByUserId = async (userId: string): Promise<RepositoryDetail[]> => {
+export const getRepositoriesByUserId = async (userId: string): Response<RepositoryDetail[]> => {
     const { data, error } = await supabase.clientTable
         .from("repositories")
         .select("*")
         .eq("author_id", userId);
-
-    if (error) {
-        console.error("Error fetching repositories:", error);
-        throw new Error("Failed to fetch repositories");
-    }
-
+    if (error) return { status: 400, success: false, message: error.message, data: null };
     const repositories = data.map((repo) => {
         return {
             id: repo.id,
@@ -76,87 +72,91 @@ export const getRepositoriesByUserId = async (userId: string): Promise<Repositor
             author_id: repo.author_id,
             tags: repo.tags
         }
-    })
-
-
-    return repositories;
+    });
+    return {
+        status: 200,
+        success: true,
+        message: "Repositories fetched successfully",
+        data: repositories
+    };
 }
 
-export const deleteRepositoryById = async (id: string): Promise<void> => {
+export const getRepositoriesCountByUserId = async (userId: string): Response<number> => {
+    const { data, error } = await supabase.clientTable
+        .from("repositories")
+        .select("*", { count: "exact" })
+        .eq("author_id", userId);
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return {
+        status: 200,
+        success: true,
+        message: "Repositories count fetched successfully",
+        data: data.length
+    };
+}
+
+export const deleteRepositoryById = async (id: string): Response<null> => {
     const { error } = await supabase.clientTable
         .from("repositories")
         .delete()
         .eq("id", id);
-
-    if (error) {
-        console.error("Error deleting repository:", error);
-        throw new Error("Failed to delete repository");
-    }
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Repository deleted successfully", data: null };
 }
 
 export const updateRepositoryName = async (
     id: string,
     newName: string,
-): Promise<void> => {
+): Response<null> => {
     const { error } = await supabase.clientTable
         .from("repositories")
         .update({
             name: newName,
+            updated_at: new Date(),
         })
         .eq("id", id);
-    if (error) {
-        console.error("Error updating repository name:", error);
-        throw new Error("Failed to update repository name");
-    }
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Repository name updated successfully", data: null };
 }
 export const updateRepositoryDescription = async (
     id: string,
     newDescription: string,
-): Promise<void> => {
+): Response<null> => {
     const { error } = await supabase.clientTable
         .from("repositories")
         .update({
             description: newDescription,
+            updated_at: new Date(),
         })
         .eq("id", id);
-    if (error) {
-        console.error("Error updating repository description:", error);
-        throw new Error("Failed to update repository description");
-    }
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Repository description updated successfully", data: null };
 }
 export const updateRepositoryTags = async (
     id: string,
     newTag: string,
     action: "add" | "remove",
-): Promise<void> => {
+): Response<null> => {
     const { data, error } = await supabase.clientTable
         .from("repositories")
         .select("tags")
         .eq("id", id)
         .single();
-
-    if (error) {
-        console.error("Error fetching repository tags:", error);
-        throw new Error("Failed to fetch repository tags");
-    }
-
+    if (error) return { status: 400, success: false, message: error.message, data: null };
     let updatedTags: string[];
     if (action === "add") {
         updatedTags = [...data.tags, newTag];
     } else {
         updatedTags = data.tags.filter((tag: string) => tag !== newTag);
     }
-
     const { error: updateError } = await supabase.clientTable
         .from("repositories")
         .update({
             tags: updatedTags,
+            updated_at: new Date(),
         })
         .eq("id", id);
-
-    if (updateError) {
-        console.error("Error updating repository tags:", updateError);
-        throw new Error("Failed to update repository tags");
-    }
+    if (updateError) return { status: 400, success: false, message: updateError.message, data: null };
+    return { status: 200, success: true, message: "Repository tags updated successfully", data: null };
 }
 

@@ -24,18 +24,15 @@ const Modal = ({
   fixedHeight?: boolean;
 }) => {
   const { isOpen, closeModal } = useModal();
-  // Track animation state separately from modal visibility
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
   const close = useCallback(() => {
     if (closable) {
-      // Start closing animation
       setIsVisible(false);
-      // Delay actual closing to allow animation to complete
       setTimeout(() => {
         closeModal(tag);
-      }, 300); // Animation duration
+      }, 300);
     } else {
       console.error("Modal is not closable");
     }
@@ -50,23 +47,19 @@ const Modal = ({
 
     window.addEventListener("keydown", handleKeyDown);
 
-    // Cleanup event listener when component unmounts
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [close, isOpen, tag]);
 
-  // Control the render status and animation based on isOpen
   useEffect(() => {
     if (isOpen(tag)) {
       setShouldRender(true);
-      // Small delay to allow DOM to update before starting animation
       setTimeout(() => {
         setIsVisible(true);
       }, 10);
     } else {
       setIsVisible(false);
-      // Remove from DOM after animation completes
       const timer = setTimeout(() => {
         setShouldRender(false);
       }, 300);
@@ -91,7 +84,6 @@ const Modal = ({
       aria-describedby={contentId}
       onClick={closable ? close : undefined}
     >
-      {/* Modal */}
       <article
         className={`rounded-lg z-50 max-h-full overflow-y-auto bg-[var(--color-background-light)] dark:bg-[var(--color-background-dark)] text-[var(--color-foreground-light)] dark:text-[var(--color-foreground-dark)] border border-[var(--color-border-light)] dark:border-[var(--color-border-dark)] transition-all duration-300 ease-in-out ${modalSizeClass} ${isVisible
           ? "opacity-100 scale-100 translate-y-0"
@@ -102,7 +94,6 @@ const Modal = ({
         onClick={(e) => e.stopPropagation()}
       >
 
-        {/* Modal header with border bottom */}
         <header className="border-b border-[var(--color-border-light)] dark:border-[var(--color-border-dark)] py-5 px-5">
           <div className="flex items-center justify-between">
             <h2
@@ -127,7 +118,6 @@ const Modal = ({
           </div>
         </header>
 
-        {/* Modal content */}
         <section
           id={contentId}
           className={`p-6 sm:p-8 ${modalClass || ''}`}

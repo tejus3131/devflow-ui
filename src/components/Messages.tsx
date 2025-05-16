@@ -38,7 +38,7 @@ const Messages: React.FC = () => {
             content: 'Hey there! How are you doing?',
             sender: 'other',
             timestamp: new Date(Date.now() - 3600000),
-            status: 'read'
+            status: 'sent'
         },
         {
             id: '2',
@@ -68,7 +68,7 @@ const Messages: React.FC = () => {
                 },
                 {
                     type: 'image',
-                    url: '/api/placeholder/400/300',
+                    url: 'https://cjmsqadtqcqiydqawvvs.supabase.co/storage/v1/object/public/custom-avatars/fngqbosqtmd',
                     name: 'concept.jpg'
                 }
             ]
@@ -300,13 +300,13 @@ const Messages: React.FC = () => {
                                     {attachment.type === 'image' ? (
                                         <>
                                     <div className="relative">
-                                        {/* <Image
-                                        width={0}
-                                        height={0} 
+                                        <Image
+                                        width={64}
+                                        height={64} 
                                         src={attachment.url} 
                                         alt={attachment.name}
                                         className="max-w-full rounded-lg w-full"
-                                        /> */}
+                                        />
                                         <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
                                         <button className="p-2 bg-black bg-opacity-50 rounded-full text-white">
                                             <ImageIcon size={18} />

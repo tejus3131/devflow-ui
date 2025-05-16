@@ -2,6 +2,8 @@
 import Modal from '@/components/Modal';
 import { useModal } from '@/hooks/useModal';
 import { useUser } from '@/hooks/useUser';
+import { emailExists, updateUserAvatar, updateUserBio, updateUserEmail, updateUserFullName, updateUserUsername } from '@/lib/data/users';
+import { requestOtp, verifyOtp } from '@/lib/email/manager';
 import React, { useEffect, useState } from 'react';
 
 interface FullNameFormsProps {
@@ -31,39 +33,20 @@ export const FullNameForm: React.FC<FullNameFormsProps> = ({
         setError(null);
         setSuccess(false);
 
-        fetch('/api/users/fullname', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId, full_name: inputValue }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to update full name');
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setSuccess(true);
-                    setTimeout(() => {
-                        setNewFullName(inputValue);
-                        closeModal('full_name_edit');
-                        setSuccess(false);
-                        setError(null);
-                    }, 1000);
-                } else {
-                    setError(data.message || 'Failed to update full name');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to update full name');
-            })
-            .finally(() => {
-                setProcessing(false);
-            });
+        try {
+            updateUserFullName(userId, inputValue)
+            setSuccess(true);
+            setTimeout(() => {
+                setNewFullName(inputValue);
+                closeModal('full_name_edit');
+                setSuccess(false);
+                setError(null);
+            }, 1000);
+        } catch (error) {
+            console.error('Error updating full name:', error);
+            setError('Failed to update full name');
+        }
+        setProcessing(false);
     };
 
     return (
@@ -209,7 +192,7 @@ export const EmailForm: React.FC<EmailFormsProps> = ({
     const [otpResent, setOtpResent] = useState(false);
 
 
-    const handleSendOtp = (e: React.FormEvent) => {
+    const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         if (inputValue.trim() === '') {
             setError('Email cannot be empty');
@@ -225,126 +208,86 @@ export const EmailForm: React.FC<EmailFormsProps> = ({
         }
         setProcessing(true);
         setError(null);
-
-        fetch('/api/users/email/send-otp', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email: inputValue, full_name: fullName }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to send OTP');
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setOtpSent(true);
-                    setError(null);
-                    setOtpId(data.data);
-                    console.log('OTP sent successfully:', data.data);
-                } else {
-                    setError(data.message || 'Failed to send OTP');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to send OTP');
-            })
-            .finally(() => {
+        try {
+            const emailOk = await emailExists(inputValue);
+            if (!emailOk.success) {
+                setError(emailOk.message);
                 setProcessing(false);
-            });
+                return;
+            }
+            if (emailOk.data) {
+                setError('Email already exists');
+                setProcessing(false);
+                return;
+            }
+            const otp_id = await requestOtp(inputValue, fullName);
+            setOtpSent(true);
+            setError(null);
+            setOtpId(otp_id);
+        } catch (error) {
+            console.error('Error sending OTP:', error);
+            setError('Failed to send OTP. Please try again.');
+        }
+        setProcessing(false);
     };
-    
-    const handleResendOtp = () => {
+
+    const handleResendOtp = async () => {
         if (!otpId) {
             setError('Cannot resend OTP. Please try again.');
             return;
         }
-        
+
         setResending(true);
         setError(null);
 
-        fetch('/api/users/email/resend-otp', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ otp_id: otpId }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to resend OTP');
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setError(null);
-                    setOtpId(data.data);
-                    setOtpResent(true);
-                    setTimeout(() => {
-                        setOtpResent(false);
-                    }, 3000); // Reset after 3 seconds
-                    console.log('OTP resent successfully:', data.data);
-                } else {
-                    setError(data.message || 'Failed to resend OTP');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to resend OTP');
-            })
-            .finally(() => {
-                setResending(false);
-            });
+        try {
+            const emailOk = await emailExists(inputValue);
+            if (!emailOk.success) {
+                setError(emailOk.message);
+                setProcessing(false);
+                return;
+            }
+            if (emailOk.data) {
+                setError('Email already exists');
+                setProcessing(false);
+                return;
+            }
+            const new_otp_id = await requestOtp(inputValue, fullName); setError(null);
+            setOtpId(new_otp_id);
+            setOtpResent(true);
+            setTimeout(() => {
+                setOtpResent(false);
+            }, 3000);
+        } catch (error) {
+            console.error('Error resending OTP:', error);
+            setError('Failed to resend OTP. Please try again.');
+        }
+        setResending(false);
     };
 
-    const handleVerifyOtp = (e: React.FormEvent) => {
+    const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         setProcessing(true);
         setError(null);
         setSuccess(false);
 
-        fetch('/api/users/email/verify-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId, email: inputValue, otp: otpValue }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    return response.json().then((res) => {
-                        throw new Error(res.message || 'Failed to verify email');
-                    });
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setSuccess(true);
-                    setTimeout(() => {
-                        setNewEmail(inputValue);
-                        closeModal('email_edit');
-                        setOtpValue('');
-                        setSuccess(false);
-                        setError(null);
-                        setOtpSent(false);
-                    }, 1000);
-                } else {
-                    setError(data.message || 'Failed to verify email');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to verify email');
-            })
-            .finally(() => {
-                setProcessing(false);
-            });
+        try {
+            await verifyOtp(inputValue, otpValue);
+            await updateUserEmail(userId, inputValue);
+            setSuccess(true);
+            setTimeout(() => {
+                setNewEmail(inputValue);
+                closeModal('email_edit');
+                setOtpValue('');
+                setSuccess(false);
+                setError(null);
+                setOtpSent(false);
+            }, 1000);
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+            setError('Failed to verify OTP. Please try again.');
+        }
+        setProcessing(false);
     };
 
     const handleOtpChange = (value: string) => {
@@ -359,10 +302,10 @@ export const EmailForm: React.FC<EmailFormsProps> = ({
         setError(null);
         setOtpValue(value);
     };
-    
+
     useEffect(() => {
         if (otpValue.length === 6) {
-            const syntheticEvent = { preventDefault: () => {} } as React.FormEvent;
+            const syntheticEvent = { preventDefault: () => { } } as React.FormEvent;
             handleVerifyOtp(syntheticEvent);
         }
     }, [otpValue]);
@@ -446,10 +389,10 @@ export const EmailForm: React.FC<EmailFormsProps> = ({
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Resend OTP button */}
                             <div className="flex justify-end">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={handleResendOtp}
                                     disabled={resending || processing || success}
@@ -560,62 +503,56 @@ export const UserNameForm: React.FC<UserNameFormProps> = ({
     const { closeModal } = useModal();
     const { reloadUser } = useUser();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (inputValue.trim() === '') {
+        const usernameWithoutAt = inputValue.startsWith('@') ? inputValue.slice(1) : inputValue;
+        if (usernameWithoutAt.trim() === '') {
             setError('Username cannot be empty');
             return;
         }
-        if (inputValue === initialValue) {
+        if (usernameWithoutAt === initialValue) {
             setError('New username cannot be the same as the current username');
             return;
         }
-        if (inputValue.length < 3 || inputValue.length > 20) {
+        if (usernameWithoutAt.length < 3 || usernameWithoutAt.length > 20) {
             setError('Username must be between 3 and 20 characters');
             return;
         }
-        if (!/^[a-zA-Z0-9_]+$/.test(inputValue)) {
-            setError('Username can only contain letters, numbers, and underscores');
+        if (/[^a-zA-Z0-9-]/g.test(usernameWithoutAt)) {
+            setError('Username can only contain letters, numbers, and hyphens');
             return;
         }
         setProcessing(true);
         setError(null);
         setSuccess(false);
+        const response = await updateUserUsername(userId, inputValue);
+        if (!response.success) {
+            setError(response.message);
+            setProcessing(false);
+            return;
+        }
+        setSuccess(true);
+        setTimeout(() => {
+            setNewUserName(inputValue);
+            closeModal('user_name_edit');
+            setSuccess(false);
+            setError(null);
+            reloadUser();
+        }, 1000);
+        setProcessing(false);
+    };
 
-        fetch('/api/users/username', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId, username: inputValue }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to update username');
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setSuccess(true);
-                    setTimeout(() => {
-                        setNewUserName(inputValue);
-                        closeModal('user_name_edit');
-                        setSuccess(false);
-                        setError(null);
-                        reloadUser();
-                    }, 1000);
-                } else {
-                    setError(data.message || 'Failed to update username');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to update username');
-            })
-            .finally(() => {
-                setProcessing(false);
-            });
+    const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let input = e.target.value;
+
+        if (!input.startsWith('@')) {
+            input = '@' + input;
+        }
+
+        const cleaned = input
+            .slice(1)
+            .replace(/[^a-zA-Z0-9-]/g, '');
+        setInputValue('@' + cleaned); // Add @ back
     };
 
     return (
@@ -633,7 +570,7 @@ export const UserNameForm: React.FC<UserNameFormProps> = ({
                             id="userName"
                             type="text"
                             value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
+                            onChange={(e) => onInputChange(e)}
                             placeholder="Enter your username"
                             disabled={processing || success}
                             className={`
@@ -797,41 +734,22 @@ export const AvatarForm: React.FC<AvatarFormProps> = ({
         setError(null);
         setSuccess(false);
 
-        const formData = new FormData();
-        formData.append('user_id', userId);
-        formData.append('file', file);
-
-        try {
-            const response = await fetch('/api/users/avatar', {
-                method: 'PUT',
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to update avatar');
-            }
-
-            if (data.success) {
-                setSuccess(true);
-                setTimeout(() => {
-                    reloadUser();
-                    onAvatarUpdate(data.data);
-                    closeModal('avatar_edit');
-                    setSuccess(false);
-                    setError(null);
-                    setPreviewUrl(null);
-                }, 1000);
-            } else {
-                setError(data.message || 'Failed to update avatar');
-            }
-        } catch (error: any) {
-            console.error('Error:', error);
-            setError(error.message || 'Failed to update avatar');
-        } finally {
+        const response = await updateUserAvatar(userId, file);
+        if (!response.success) {
+            setError(response.message);
             setProcessing(false);
+            return;
         }
+        setSuccess(true);
+        setTimeout(() => {
+            reloadUser();
+            onAvatarUpdate(response.data!);
+            closeModal('avatar_edit');
+            setSuccess(false);
+            setError(null);
+            setPreviewUrl(null);
+        }, 1000);
+        setProcessing(false);
     };
 
     return (
@@ -985,7 +903,7 @@ export const BioForm: React.FC<BioFormsProps> = ({
     const [success, setSuccess] = useState<boolean>(false);
     const { closeModal } = useModal();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (inputValue.trim() === '') {
             setError('Full name cannot be empty');
@@ -995,39 +913,20 @@ export const BioForm: React.FC<BioFormsProps> = ({
         setError(null);
         setSuccess(false);
 
-        fetch('/api/users/bio', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: userId, bio: inputValue }),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to update bio');
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.success) {
-                    setSuccess(true);
-                    setTimeout(() => {
-                        setNewBio(inputValue);
-                        closeModal('bio_edit');
-                        setSuccess(false);
-                        setError(null);
-                    }, 1000);
-                } else {
-                    setError(data.message || 'Failed to update bio');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setError(error.message || 'Failed to update bio');
-            })
-            .finally(() => {
-                setProcessing(false);
-            });
+        const response = await updateUserBio(userId, inputValue);
+        if (!response.success) {
+            setError(response.message);
+            setProcessing(false);
+            return;
+        }
+        setSuccess(true);
+        setTimeout(() => {
+            setNewBio(inputValue);
+            closeModal('bio_edit');
+            setSuccess(false);
+            setError(null);
+        }, 1000);
+        setProcessing(false);
     };
 
     return (

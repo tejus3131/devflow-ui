@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./styles/globals.css";
-import { UserProvider } from "../context/UserContext";
-import Sidebar from "../components/Sidebar";
+import { UserProvider } from "@/context/UserContext";
+import Sidebar from "@/components/Sidebar";
 import type { ReactNode } from "react";
 import { Satisfy, Nunito, JetBrains_Mono } from "next/font/google";
-import { ThemeProvider } from "../context/ThemeContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { ModalProvider } from "@/context/ModalContext";
 
 const inter = Satisfy({

@@ -9,7 +9,7 @@ import {
   FileText,
   Database,
   BookOpen,
-  MessageSquareTextIcon,
+  MessageSquareTextIcon
   Menu,
   X,
 } from "lucide-react";

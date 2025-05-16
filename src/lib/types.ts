@@ -53,7 +53,7 @@ export interface RepositoryDetail {
 }
 
 export type VoteType = 'upvote' | 'downvote' | null;
-export type ContentType = "Repository" | "Component" | "Configuration" | "Flavour";
+export type ContentType = "Repository" | "Component" | "Configuration" | "Flavour" | "Blog";
 
 
 export interface Vote {

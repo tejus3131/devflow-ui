@@ -56,7 +56,7 @@ export interface RepositoryDetail {
 }
 
 export type VoteType = 'upvote' | 'downvote' | null;
-export type ContentType = "repository" | "component" | "configuration" | "flavour";
+export type ContentType = "repository" | "component" | "configuration" | "flavour"| "blog";
 export interface Vote {
   id: string;
   user_id: string;

@@ -1,5 +1,6 @@
 "use client";
 
+
 import React, { JSX, use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -87,6 +88,11 @@ export function ContentCard({
       textColor: "text-purple-800 dark:text-purple-300",
       icon: Palette,
     },
+    Blog:{
+      bgColor: "bg-red-100 dark:bg-red-800/30",
+      textColor: "text-red-800 dark:text-red-300",
+      icon: Palette,
+    }
   };
 
   const currentTypeStyle = typeStyles[type];

@@ -81,6 +81,20 @@ export const getRepositoriesByUserId = async (userId: string): Response<Reposito
     };
 }
 
+export const getRepositoriesCountByUserId = async (userId: string): Response<number> => {
+    const { data, error } = await supabase.clientTable
+        .from("repositories")
+        .select("*", { count: "exact" })
+        .eq("author_id", userId);
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return {
+        status: 200,
+        success: true,
+        message: "Repositories count fetched successfully",
+        data: data.length
+    };
+}
+
 export const deleteRepositoryById = async (id: string): Response<null> => {
     const { error } = await supabase.clientTable
         .from("repositories")
@@ -98,6 +112,7 @@ export const updateRepositoryName = async (
         .from("repositories")
         .update({
             name: newName,
+            updated_at: new Date(),
         })
         .eq("id", id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
@@ -111,6 +126,7 @@ export const updateRepositoryDescription = async (
         .from("repositories")
         .update({
             description: newDescription,
+            updated_at: new Date(),
         })
         .eq("id", id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
@@ -137,6 +153,7 @@ export const updateRepositoryTags = async (
         .from("repositories")
         .update({
             tags: updatedTags,
+            updated_at: new Date(),
         })
         .eq("id", id);
     if (updateError) return { status: 400, success: false, message: updateError.message, data: null };

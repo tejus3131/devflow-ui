@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 import { Moon, Sun, Monitor } from 'lucide-react';
 
 export function ThemeSwitch() {
@@ -10,35 +10,32 @@ export function ThemeSwitch() {
         <div className="flex items-center space-x-2 rounded-lg">
             <button
                 onClick={() => setTheme('light')}
-                className={`rounded-md p-1.5 ${
-                    theme === 'light' 
-                        ? 'border border-primary-light text-primary-light' 
+                className={`rounded-md p-1.5 ${theme === 'light'
+                        ? 'border border-primary-light text-primary-light'
                         : 'text-foreground-light dark:text-foreground-dark'
-                }`}
+                    }`}
                 aria-label="Light mode"
             >
                 <Sun size={16} />
             </button>
-            
+
             <button
                 onClick={() => setTheme('dark')}
-                className={`rounded-md p-1.5 ${
-                    theme === 'dark' 
-                        ? 'border border-primary-dark text-primary-dark' 
+                className={`rounded-md p-1.5 ${theme === 'dark'
+                        ? 'border border-primary-dark text-primary-dark'
                         : 'text-foreground-light dark:text-foreground-dark'
-                }`}
+                    }`}
                 aria-label="Dark mode"
             >
                 <Moon size={16} />
             </button>
-            
+
             <button
                 onClick={() => setTheme('system')}
-                className={`rounded-md p-1.5 ${
-                    theme === 'system' 
-                        ? 'border border-primary-dark text-primary-dark  dark:text-primary-dark' 
+                className={`rounded-md p-1.5 ${theme === 'system'
+                        ? 'border border-primary-dark text-primary-dark  dark:text-primary-dark'
                         : 'text-foreground-light dark:text-foreground-dark'
-                }`}
+                    }`}
                 aria-label="System preference"
             >
                 <Monitor size={16} />
@@ -49,7 +46,7 @@ export function ThemeSwitch() {
 
 export function ThemeToggle() {
     const { resolvedTheme, toggleTheme } = useTheme();
-    
+
     return (
         <button
             onClick={toggleTheme}

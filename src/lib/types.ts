@@ -26,6 +26,7 @@ export interface Connection {
 }
 
 export interface UserConnection {
+  connection_id: string;
   user_name: string;
   full_name: string;
   avatar_url: string;
@@ -61,4 +62,29 @@ export interface Vote {
   user_id: string;
   repo_id?: string;
   vote: VoteType;
+}
+
+export type AttachmentType = 'image' | 'document' | 'file';
+
+export interface Attachment {
+  id: string;
+  type: AttachmentType;
+  url: string;
+  name: string;
+  size: number;
+}
+
+export interface Message {
+  id: string;
+  content: string;
+  sender: 'me' | 'other';
+  seen: boolean;
+  attachments: Attachment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MessageGroupType {
+  date: string;
+  messages: Message[];
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX, useState } from "react";
+import React, { JSX, use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Folder,
@@ -52,6 +52,12 @@ export function ContentCard({
     useState<VoteType>(userVoteType);
   const [localUpvotes, setLocalUpvotes] = useState<number>(upvotes);
   const [localDownvotes, setLocalDownvotes] = useState<number>(downvotes);
+
+  useEffect(() => {
+    setLocalUserVoteType(userVoteType);
+    setLocalUpvotes(upvotes);
+    setLocalDownvotes(downvotes);
+  }, [userVoteType, upvotes, downvotes]);
 
   const typeStyles: Record<
     ContentType,
@@ -168,7 +174,7 @@ export function ContentCard({
             height={32}
           />
           <span className="text-sm sm:text-base text-on-surface-light dark:text-on-accent-dark">
-            @{author!.user_name}
+            {author!.user_name}
           </span>
         </Link>}
 

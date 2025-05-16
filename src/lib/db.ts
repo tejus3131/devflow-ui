@@ -8,13 +8,14 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error("Supabase Anon Key must be provided");
 }
 
-const publicClientSideSupabase = createClient(
+const clientSideSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
 export default {
-  clientAuth: publicClientSideSupabase.auth,
-  clientTable: publicClientSideSupabase,
-  clientStorage: publicClientSideSupabase.storage,
+  clientAuth: clientSideSupabase.auth,
+  clientTable: clientSideSupabase,
+  clientRealtime: clientSideSupabase,
+  clientStorage: clientSideSupabase.storage,
 };

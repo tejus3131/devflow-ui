@@ -105,7 +105,7 @@ export function RepositoryCard({
             description={repository.description}
             breadcrumbs={breadcrumbs}
             breadcrumbsState={breadcrumbsState}
-            type="Repository"
+            type="repository"
             author={author}
             authorState={authorState}
             tags={repository.tags}

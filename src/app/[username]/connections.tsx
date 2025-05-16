@@ -26,18 +26,7 @@ export const ConnectionButton: React.FC<{ user_id: string, profile_user_id: stri
     const [userRole, setUserRole] = useState<"initiator" | "target" | null>(null);
 
     if (user_id === profile_user_id) {
-        return (
-            <div className="w-[150px] sm:w-[180px]">
-                <Button
-                    variant="primary"
-                    className="py-2 px-4 w-full text-sm"
-                    onClick={() => { openModal('connection_edit') }}
-                    disabled={user_id !== profile_user_id}
-                >
-                    Manage Connections
-                </Button>
-            </div>
-        );
+        return (<></>); // Don't show connection button for self
     }
 
     useEffect(() => {

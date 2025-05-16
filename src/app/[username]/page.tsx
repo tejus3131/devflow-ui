@@ -10,6 +10,7 @@ import {
   Link,
   LogOut,
   BarChart,
+  UserRoundX,
 } from "lucide-react";
 import { UserDetail } from "@/lib/types";
 import { useUser } from "@/hooks/useUser";
@@ -20,6 +21,7 @@ import BadgeTray from "@/components/Badge";
 import { ConnectionButton, ConnectionCard, ConnectionManager } from "./connections";
 import StatsCard from "@/components/StatsCard";
 import { getUserByUsername } from "@/lib/data/users";
+import { DeleteAccountModal, RepositoriesCard, SettingsMenu } from "./settings";
 
 
 const favorites = ["post1", "post2", "post3"];
@@ -34,7 +36,7 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
   const [userState, setUserState] = useState<"loading" | "error" | "success">("loading");
   const [userError, setUserError] = useState<string | null>(null);
 
-  const { user: selfUser, isLoading: selfLoading, isAuthenticated: selfAuthenticated, signOut } = useUser();
+  const { user: selfUser, isLoading: selfLoading, isAuthenticated: selfAuthenticated, signOut, reloadUser } = useUser();
   const [isSelf, setIsSelf] = useState(false);
 
   const { openModal } = useModal();
@@ -88,6 +90,12 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
     setIsSelf(true);
   };
 
+  const onDelete = async () => {
+    setUserState("loading");
+    await handleSignOut();
+    router.push("/");
+  };
+
   if (userState === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -113,16 +121,17 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
         <AvatarForm initialUrl={user.avatar_url} userId={user.id!} onAvatarUpdate={(newAvatar) => setUser((prev) => (prev ? { ...prev, avatar_url: newAvatar } : prev))} />
         <BioForm initialValue={user.bio!} userId={user.id!} setNewBio={(newBio) => setUser((prev) => (prev ? { ...prev, bio: newBio } : prev))} />
         <ConnectionManager user_id={user.id!} />
+        {isSelf && <DeleteAccountModal username={user.user_name!} onAccountDeleted={onDelete} />}
       </>
     )}
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-foreground-light dark:text-foreground-dark">
       <div className="max-w-6xl mx-auto p-4 py-8">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Profile Information */}
-          <div className="w-full md:w-2/3 bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-gray-300 dark:border-border-dark overflow-hidden">
-            <div className="p-6">
+          <div className={`w-full bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-gray-300 dark:border-border-dark overflow-hidden`}>
+            <div className="p-6 ">
               {/* User Header Section - Avatar on left, info on right */}
-              <div className="flex flex-col sm:flex-row gap-6 items-start mb-8">
+              <div className="flex flex-col sm:flex-row gap-6 items-start">
                 {/* Avatar */}
                 <div className="group relative h-32 w-32 flex-shrink-0 rounded-xl overflow-hidden bg-neutral-light dark:bg-neutral-dark border-4 border-surface-light dark:border-surface-dark shadow-xl">
                   {user?.avatar_url ? (
@@ -238,8 +247,6 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                     </div>
                   </div>
 
-                  {/* Badges inline with user info */}
-
                   {/* Connections and Likes */}
                 </div>
 
@@ -249,164 +256,48 @@ const ProfilePage: FC<ProfilePageProps> = ({ params }) => {
                 </div>
               </div>
 
-              <div className="space-y-6">
+              {/* About Me Section */}
+              <div className="mt-8">
+                <div
+                  className={`bg-neutral-light dark:bg-neutral-dark border border-neutral-dark/20 dark:border-border-dark p-4 rounded-xl group transition-all duration-300 ${isSelf ? "hover:shadow-lg hover:border-primary-light dark:hover:border-primary-dark" : ""
+                    }`}
+                  onClick={() => {
+                    if (isSelf) {
+                      openModal("bio_edit");
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between">
+                    <p className="text-on-neutral-light dark:text-on-neutral-dark text-sm sm:text-base">
+                      {user?.bio || "This user hasn't added a bio yet."}
+                    </p>
+                    {isSelf && (
+                      <button
+                        className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
+                        aria-label="Edit bio"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 mt-8">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                   <ConnectionCard user_id={user!.id} />
-                  <StatsCard
-                    title="Thoughts"
-                    value={4}
-                    icon={<BarChart size={20} />}
-                    state="success"
-                    error={null}
-                  />
+                  <RepositoriesCard user_id={user!.id} />
                 </div>
-              </div>
-
-              {/* About Me Section */}
-              <div className="mt-8"
-                onClick={() => {
-                  if (isSelf) {
-                    openModal("bio_edit");
-                  }
-                }}>
-                <h3 className="text-lg font-bold mb-3 flex items-center gap-2 group">
-                  About Me
-                  {isSelf && (
-                    <div
-                      className="ml-2 p-1.5 rounded-full bg-neutral-light dark:bg-neutral-dark text-primary-light dark:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-light/10 dark:hover:bg-primary-dark/20"
-                      aria-label="Edit username"
-                    >
-                      <Edit2 size={14} />
-                    </div>
-                  )}
-                </h3>
-                <div className="bg-neutral-light dark:bg-neutral-dark border border-neutral-dark/20 dark:border-border-dark p-4 rounded-xl">
-                  <p className="text-on-neutral-light dark:text-on-neutral-dark">
-                    {user?.bio || "This user hasn't added a bio yet."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Favorites Button */}
-              <div className="mt-8">
-                <button className="w-full bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark hover:from-primary-light/90 hover:to-secondary-light/90 dark:hover:from-primary-dark/90 dark:hover:to-secondary-dark/90 text-on-primary-light dark:text-on-primary-dark py-3 rounded-lg transition duration-200 font-medium flex items-center justify-center gap-2 shadow-md">
-                  <span>View Favorites</span>
-                  <span className="bg-primary-light/80 dark:bg-primary-dark/80 text-xs px-2 py-1 rounded-full">
-                    {favorites.length}
-                  </span>
-                </button>
               </div>
             </div>
           </div>
 
           {/* Settings Section */}
-          <div className="w-full md:w-1/3 space-y-6">
-            {/* Settings Panel */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-gray-300 dark:border-border-dark p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Settings size={18} className="text-primary-light dark:text-primary-dark" />
-                Settings
-              </h2>
-              <ul className="space-y-1">
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center gap-3 p-3 hover:bg-neutral-light dark:hover:bg-neutral-dark rounded-lg transition-colors"
-                  >
-                    <Settings
-                      className="text-on-muted-light dark:text-on-muted-dark"
-                      size={18}
-                    />
-                    <span>Account Settings</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center gap-3 p-3 hover:bg-neutral-light dark:hover:bg-neutral-dark rounded-lg transition-colors"
-                  >
-                    <Bell
-                      className="text-on-muted-light dark:text-on-muted-dark"
-                      size={18}
-                    />
-                    <span>Notification Preferences</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center gap-3 p-3 hover:bg-neutral-light dark:hover:bg-neutral-dark rounded-lg transition-colors"
-                  >
-                    <Lock
-                      className="text-on-muted-light dark:text-on-muted-dark"
-                      size={18}
-                    />
-                    <span>Privacy & Security</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center gap-3 p-3 hover:bg-neutral-light dark:hover:bg-neutral-dark rounded-lg transition-colors"
-                  >
-                    <Link
-                      className="text-on-muted-light dark:text-on-muted-dark"
-                      size={18}
-                    />
-                    <span>Connected Accounts</span>
-                  </a>
-                </li>
-                {isSelf && (
-                  <li>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full flex items-center gap-3 p-3 text-error hover:bg-error/10 rounded-lg transition-colors"
-                    >
-                      <LogOut size={18} />
-                      <span>Log Out</span>
-                    </button>
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            {/* Premium Features Panel */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-gray-300 dark:border-border-dark p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <span className="text-primary-light dark:text-primary-dark">✦</span>
-                  Premium Features
-                </h3>
-                <span className="px-2 py-1 bg-primary-light/20 dark:bg-primary-dark/20 text-primary-light dark:text-primary-dark text-xs font-medium rounded-full">
-                  PRO
-                </span>
-              </div>
-              <div className="bg-gradient-to-r from-primary-light/10 to-secondary-light/10 dark:from-primary-dark/20 dark:to-secondary-dark/20 border border-primary-light/30 dark:border-primary-dark/30 rounded-lg p-4 mb-4">
-                <p className="text-on-surface-light dark:text-on-surface-dark font-medium mb-2">
-                  Unlock advanced features and analytics.
-                </p>
-                <ul className="text-on-neutral-light dark:text-on-neutral-dark text-sm space-y-2 mt-3 mb-4">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary-light dark:bg-primary-dark"></div>
-                    <span>Advanced analytics</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary-light dark:bg-primary-dark"></div>
-                    <span>Unlimited templates</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary-light dark:bg-primary-dark"></div>
-                    <span>Performance reports</span>
-                  </li>
-                </ul>
-              </div>
-              <button className="w-full bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark hover:from-primary-light/90 hover:to-secondary-light/90 dark:hover:from-primary-dark/90 dark:hover:to-secondary-dark/90 text-on-primary-light dark:text-on-primary-dark py-3 rounded-lg transition duration-300 font-medium shadow-lg shadow-primary-light/20 dark:shadow-primary-dark/20">
-                Upgrade Plan
-              </button>
-            </div>
-          </div>
+          {isSelf && (
+            <SettingsMenu onSignOut={handleSignOut} onAccountDelete={onDelete} />
+          )}
         </div>
       </div>
     </div>

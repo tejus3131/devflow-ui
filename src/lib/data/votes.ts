@@ -13,7 +13,10 @@ export const getVotesByRepoId = async (repoId: string): Response<Vote[]> => {
 export const upvoteRepository = async (repoId: string, userId: string): Response<Vote> => {
 
     const response = await getVoteByRepoIdAndUserId(repoId, userId);
-    if (response) {
+    if (!response.success) {
+        return { status: 400, success: false, message: response.message, data: null };
+    }
+    if (response.data) {
         if (response.data!.vote === "upvote") {
             return { status: 200, success: true, message: "Vote fetched successfully", data: response.data };
         } else {
@@ -35,7 +38,10 @@ export const upvoteRepository = async (repoId: string, userId: string): Response
 
 export const downvoteRepository = async (repoId: string, userId: string): Response<Vote> => {
     const response = await getVoteByRepoIdAndUserId(repoId, userId);
-    if (response) {
+    if (!response.success) {
+        return { status: 400, success: false, message: response.message, data: null };
+    }
+    if (response.data) {
         if (response.data!.vote === "downvote") {
             return { status: 200, success: true, message: "Vote fetched successfully", data: response.data };
         } else {

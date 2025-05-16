@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useUser } from "../hooks/useUser";
 import { ThemeSwitch } from "./ThemeToggle";
+import { manageUserState } from "@/lib/data/chats";
 
 const Sidebar: React.FC = () => {
   const [expanded, setExpanded] = useState(false);
@@ -22,10 +23,29 @@ const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user } = useUser();
 
+  useEffect(() => {
+
+    if (!user) return;
+    let unsubscribe: (() => void) | null = null;
+    const manageUserStateAsync = async () => {
+      const response = await manageUserState(user.user_name);
+      if (response.status !== 200) {
+        console.error("Failed to manage user state:", response.message);
+      }
+      unsubscribe = response.data;
+    };
+    const response = manageUserStateAsync();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user]);
+
   const nav_links = [
     { href: "/", label: "Discover", icon: <Compass className="w-5 h-5" /> },
     {
-      href: `/${user?.user_name}/chats`,
+      href: `/chats`,
       label: "Messages",
       icon: <MessageSquareTextIcon className="w-5 h-5" />,
     },

@@ -14,6 +14,17 @@ export async function getUserById(user_id: string): Response<UserDetail> {
 
     if (error) return { status: 400, success: false, message: error.message, data: null };
     if (!data) return { status: 404, success: false, message: "User not found", data: null };
+
+    if (!data.avatar_url.startsWith("https://avatars.githubusercontent.com/")) {
+        const response = await getAvatarUrl(data.avatar_url);
+        if (!response.success) return { status: 400, success: false, message: "Error getting public URL for avatar", data: null };
+        if (response.data) {
+            data.avatar_url = response.data;
+        }
+    }
+
+    console.log("Get user by ID response:", data);
+
     return {
         status: 200,
         success: true,
@@ -45,7 +56,10 @@ export async function emailExists(email: string): Response<boolean> {
 }
 
 export async function updateUserEmail(user_id: string, email: string): Response<null> {
-    const { error } = await supabase.clientTable.from("user_profile").update({ email }).eq("id", user_id).single();
+    const { error } = await supabase.clientTable.from("user_profile").update({
+        email,
+        updated_at: new Date(),
+    }).eq("id", user_id).single();
     if (error) {
         if (error.code === "23505") {
             return { status: 409, success: false, message: "Email already exists", data: null };
@@ -64,31 +78,58 @@ async function uploadAvatar(file: File): Response<string> {
             upsert: true,
         });
     if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Public URL fetched successfully", data: randomId };
+}
+
+export const getAvatarUrl = async (avatar_id: string): Response<string> => {
     const { data } = supabase
         .clientStorage
         .from("custom-avatars")
-        .getPublicUrl(randomId);
-    if (!data) return { status: 400, success: false, message: "Error getting public URL for avatar", data: null };
+        .getPublicUrl(avatar_id);
     return { status: 200, success: true, message: "Public URL fetched successfully", data: data.publicUrl };
 }
 
+async function deleteAvatar(avatar_id: string): Response<null> {
+    const { error } = await supabase.clientStorage
+        .from("custom-avatars")
+        .remove([avatar_id]);
+    if (error) return { status: 400, success: false, message: error.message, data: null };
+    return { status: 200, success: true, message: "Avatar deleted successfully", data: null };
+}
+
 export async function updateUserAvatar(user_id: string, file: File): Response<string> {
+    const userResponse = await getUserById(user_id);
+    if (!userResponse.success) return { status: userResponse.status, success: false, message: userResponse.message, data: null };
     const response = await uploadAvatar(file);
     if (!response.success) return { status: response.status, success: false, message: response.message, data: null };
-    if (!response.data) return { status: 400, success: false, message: "Error getting public URL for avatar", data: null };
-    const { error } = await supabase.clientTable.from("user_profile").update({ avatar_url: response.data }).eq("id", user_id);
+    const { error } = await supabase.clientTable.from("user_profile").update({
+        avatar_url: response.data,
+        updated_at: new Date(),
+    }).eq("id", user_id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
-    return { status: 200, success: true, message: "Avatar updated successfully", data: response.data };
+    if (!userResponse.data!.avatar_url.startsWith("https://avatars.githubusercontent.com/")) {
+        const response = await deleteAvatar(userResponse.data!.avatar_url);
+        if (!response.success) return { status: response.status, success: false, message: response.message, data: null };
+    }
+    const avatarResponse = await getAvatarUrl(response.data!);
+    if (!avatarResponse.success) return { status: avatarResponse.status, success: false, message: avatarResponse.message, data: null };
+    return { status: 200, success: true, message: "Avatar updated successfully", data: avatarResponse.data };
 }
 
 export async function updateUserBio(user_id: string, bio: string): Response<null> {
-    const { error } = await supabase.clientTable.from("user_profile").update({ bio }).eq("id", user_id);
+    const { error } = await supabase.clientTable.from("user_profile").update({
+        bio,
+        updated_at: new Date(),
+    }).eq("id", user_id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
     return { status: 200, success: true, message: "Bio updated successfully", data: null };
 }
 
 export async function updateUserUsername(user_id: string, username: string): Response<null> {
-    const { data, error } = await supabase.clientTable.from("user_profile").update({ username }).eq("id", user_id);
+    const { data, error } = await supabase.clientTable.from("user_profile").update({
+        username,
+        updated_at: new Date(),
+    }).eq("id", user_id);
     if (error) {
         if (error.code === "23505") {
             return { status: 409, success: false, message: "Username already exists", data: null };
@@ -99,12 +140,19 @@ export async function updateUserUsername(user_id: string, username: string): Res
 }
 
 export async function updateUserFullName(user_id: string, full_name: string): Response<null> {
-    const { error } = await supabase.clientTable.from("user_profile").update({ fullname: full_name }).eq("id", user_id);
+    const { error } = await supabase.clientTable.from("user_profile").update({
+        fullname: full_name,
+        updated_at: new Date(),
+    }).eq("id", user_id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
     return { status: 200, success: true, message: "Full name updated successfully", data: null };
 }
 
 export async function deleteUserById(user_id: string): Response<null> {
+    const response = await getUserById(user_id);
+    if (!response.success) return { status: response.status, success: false, message: response.message, data: null };
+    const avatarResponse = await deleteAvatar(response.data!.avatar_url);
+    if (!avatarResponse.success) return { status: avatarResponse.status, success: false, message: avatarResponse.message, data: null };
     const { error } = await supabase.clientTable.from("user_profile").delete().eq("id", user_id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
     return { status: 200, success: true, message: "User deleted successfully", data: null };
@@ -164,6 +212,7 @@ export async function getUserConnections(user_id: string): Response<Connections>
             const response = await getUserById(otherUserId);
             if (!response.success) return { status: 400, success: false, message: `Error fetching user details for user_id ${otherUserId}: ${response.message}`, data: null };
             const connection: UserConnection = {
+                connection_id: item.id,
                 user_name: response.data!.user_name,
                 full_name: response.data!.full_name,
                 avatar_url: response.data!.avatar_url
@@ -249,7 +298,10 @@ export async function initiateConnection(initiator_id: string, target_id: string
 export async function acceptConnection(connection_id: string): Response<null> {
     const { error } = await supabase.clientTable
         .from("connections")
-        .update({ status: "accepted" })
+        .update({
+            status: "accepted",
+            updated_at: new Date(),
+        })
         .eq("id", connection_id);
     if (error) return { status: 400, success: false, message: error.message, data: null };
     return { status: 200, success: true, message: "Connection accepted successfully", data: null };
@@ -258,7 +310,10 @@ export async function acceptConnection(connection_id: string): Response<null> {
 export async function declineConnection(connection_id: string): Response<null> {
     const { error } = await supabase.clientTable
         .from("connections")
-        .update({ status: "declined" })
+        .update({
+            status: "declined",
+            updated_at: new Date(),
+        })
         .eq("id", connection_id);
 
     if (error) return { status: 400, success: false, message: error.message, data: null };
@@ -268,7 +323,10 @@ export async function declineConnection(connection_id: string): Response<null> {
 export async function blockConnection(connection_id: string): Response<null> {
     const { error } = await supabase.clientTable
         .from("connections")
-        .update({ status: "blocked" })
+        .update({
+            status: "blocked",
+            updated_at: new Date(),
+        })
         .eq("id", connection_id);
 
     if (error) return { status: 400, success: false, message: error.message, data: null };
